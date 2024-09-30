@@ -1,0 +1,71 @@
+[tool.poetry]
+name = "dvf"
+version = "0.1.0"
+description = ""
+authors = ["Marcin Łoś <marcin.los.91@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+numpy = "^2.1.1"
+
+[tool.poetry.group.dev.dependencies]
+ruff = "^0.6.8"
+pre-commit = "^3.8.0"
+codespell = "^2.3"
+
+[tool.poetry.group.test.dependencies]
+pytest = "^8.3.3"
+pytest-mock = "^3.14.0"
+pytest-watcher = "^0.4.3"
+
+[tool.poetry.group.notebooks.dependencies]
+jupyterlab = "^4.2.5"
+jupyterlab-myst = "^2.4.2"
+
+[tool.ruff]
+target-version = "py311"
+src = [
+    "src",
+    "tests",
+    "scripts",
+]
+
+[tool.ruff.lint]
+select = [
+    "E",     # pycodestyle
+    "F",     # Pyflakes
+    "D",     # pydoc
+    "UP",    # pyupgrade
+    "B",     # flake8-bugbear
+    "SIM",   # flake8-simplify
+    "PT",    # flake8-pytest-style
+    "I",     # isort
+]
+
+# ignore missing docstrings
+ignore = [
+    "D100",
+    "D101",
+    "D102",
+    "D103",
+    "D104",
+    "D105",
+]
+
+[tool.ruff.lint.pydocstyle]
+convention = "numpy"
+
+[tool.jupytext.formats]
+"notebooks/" = "ipynb"
+"scripts/" = "py:percent"
+
+[tool.pytest.ini_options]
+testpaths = [
+    "tests",
+    "src",
+]
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
