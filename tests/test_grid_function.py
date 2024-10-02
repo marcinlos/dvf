@@ -1,6 +1,7 @@
 import numpy as np
 import pytest
 
+import dvf
 from dvf import Grid, GridFunction
 
 
@@ -234,3 +235,34 @@ def test_cannot_combine_grid_functions_from_different_grids(grid4x4):
 
     with pytest.raises(ValueError, match="Grids do not match"):
         f + g
+
+
+@pytest.mark.parametrize(
+    ("dvf_fun", "fun"),
+    [
+        (dvf.sin, np.sin),
+        (dvf.cos, np.cos),
+        (dvf.tan, np.tan),
+        (dvf.asin, np.asin),
+        (dvf.acos, np.acos),
+        (dvf.atan, np.atan),
+        (dvf.sinh, np.sinh),
+        (dvf.cosh, np.cosh),
+        (dvf.tanh, np.tanh),
+        (dvf.asinh, np.asinh),
+        (dvf.acosh, np.acosh),
+        (dvf.atanh, np.atanh),
+        (dvf.exp, np.exp),
+        (dvf.log, np.log),
+        (dvf.sqrt, np.sqrt),
+    ],
+)
+@pytest.mark.filterwarnings("ignore:invalid value encountered")
+def test_can_apply_functions_to_grid_function(dvf_fun, fun, grid4x4):
+    f = GridFunction.from_function(lambda x, y: 0.1 + 0.3 * x + 0.5 * y**2, grid4x4)
+    s = dvf_fun(f)
+    h = GridFunction.from_function(
+        lambda x, y: fun(0.1 + 0.3 * x + 0.5 * y**2), grid4x4
+    )
+
+    assert_functions_equal(s, h)

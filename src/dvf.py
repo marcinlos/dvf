@@ -96,12 +96,17 @@ class Grid:
                     yield pair
 
 
-def lift(op, *fs):
+def _lift(op, *fs):
     def composite(*args, **kwargs):
         fvals = tuple(f(*args, **kwargs) for f in fs)
         return op(*fvals)
 
     return composite
+
+
+def _lift_to_gridfun(f, gridfun):
+    fun = _lift(f, gridfun)
+    return GridFunction(fun, gridfun.grid)
 
 
 class GridFunction:
@@ -149,7 +154,7 @@ class GridFunction:
             other = GridFunction.const(other, self.grid)
 
         self._ensure_same_grid(other)
-        fun = lift(op, self.fun, other.fun)
+        fun = _lift(op, self.fun, other.fun)
         return GridFunction(fun, self.grid)
 
     def _rev_binop(self, op, other):
@@ -189,7 +194,31 @@ class GridFunction:
         return self._rev_binop(operator.pow, other)
 
     def __neg__(self):
-        return GridFunction(lift(operator.neg, self.fun), self.grid)
+        return _lift_to_gridfun(operator.neg, self)
 
     def __abs__(self):
-        return GridFunction(lift(operator.abs, self.fun), self.grid)
+        return _lift_to_gridfun(operator.abs, self)
+
+
+def _as_gridfun_function(f):
+    def fun(gridfun):
+        return _lift_to_gridfun(f, gridfun)
+
+    return fun
+
+
+sin = _as_gridfun_function(np.sin)
+cos = _as_gridfun_function(np.cos)
+tan = _as_gridfun_function(np.tan)
+asin = _as_gridfun_function(np.asin)
+acos = _as_gridfun_function(np.acos)
+atan = _as_gridfun_function(np.atan)
+sinh = _as_gridfun_function(np.sinh)
+cosh = _as_gridfun_function(np.cosh)
+tanh = _as_gridfun_function(np.tanh)
+asinh = _as_gridfun_function(np.asinh)
+acosh = _as_gridfun_function(np.acosh)
+atanh = _as_gridfun_function(np.atanh)
+exp = _as_gridfun_function(np.exp)
+log = _as_gridfun_function(np.log)
+sqrt = _as_gridfun_function(np.sqrt)
