@@ -220,3 +220,12 @@ def test_coord_functions(grid4x4):
 
     np.testing.assert_allclose(x.tabulate(), xx.tabulate())
     np.testing.assert_allclose(y.tabulate(), yy.tabulate())
+
+
+def test_cannot_combine_grid_functions_from_different_grids(grid4x4):
+    other_grid = Grid(3)
+    f = GridFunction.const(3, grid4x4)
+    g = GridFunction.const(2, other_grid)
+
+    with pytest.raises(ValueError, match="Grids do not match"):
+        f + g
