@@ -3,17 +3,7 @@ from collections import Counter
 import numpy as np
 import pytest
 
-from dvf import Edge, Grid
-
-
-@pytest.fixture
-def grid3x3():
-    return Grid(2)
-
-
-@pytest.fixture
-def grid5x5():
-    return Grid(4)
+from dvf import Edge
 
 
 def test_indices(grid3x3):

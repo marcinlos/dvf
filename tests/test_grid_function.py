@@ -5,11 +5,6 @@ import dvf
 from dvf import Grid, GridFunction
 
 
-@pytest.fixture
-def grid4x4():
-    return Grid(3)
-
-
 def assert_functions_equal(actual, expected):
     __tracebackhide__ = True
     np.testing.assert_allclose(actual.tabulate(), expected.tabulate())
