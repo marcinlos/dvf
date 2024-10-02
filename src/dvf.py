@@ -225,3 +225,9 @@ atanh = _as_gridfun_function(np.atanh)
 exp = _as_gridfun_function(np.exp)
 log = _as_gridfun_function(np.log)
 sqrt = _as_gridfun_function(np.sqrt)
+
+
+def integrate(f):
+    grid = f.grid
+    h = grid.h
+    return h**2 * sum(f(*idx) for idx in grid.indices)
