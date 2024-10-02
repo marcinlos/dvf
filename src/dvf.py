@@ -118,7 +118,10 @@ class GridFunction:
         return self.fun(i, j)
 
     def tabulate(self):
-        return np.fromfunction(self.fun, self.grid.shape, dtype=np.intp)
+        array = np.fromfunction(self.fun, self.grid.shape, dtype=np.intp)
+        # Since arrays created by np.fromfunction have shape determined fully
+        # by the function, broadcasting is required for constant functions
+        return np.broadcast_to(array, self.grid.shape)
 
     @staticmethod
     def from_function(fun, grid):

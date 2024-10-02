@@ -41,6 +41,12 @@ def test_can_tabulate_values(grid4x4):
     np.testing.assert_allclose(actual, expected)
 
 
+def test_tabulate_returns_correct_shape_for_constant_function(grid4x4):
+    f = GridFunction.const(3, grid4x4)
+    data = f.tabulate()
+    assert data.shape == grid4x4.shape
+
+
 def test_can_create_from_array(grid4x4):
     data = np.arange(16).reshape(4, 4)
     f = GridFunction.from_array(data, grid4x4)
