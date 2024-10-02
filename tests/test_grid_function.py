@@ -9,6 +9,11 @@ def grid4x4():
     return Grid(3)
 
 
+def assert_functions_equal(actual, expected):
+    __tracebackhide__ = True
+    np.testing.assert_allclose(actual.tabulate(), expected.tabulate())
+
+
 def test_can_create_from_coords_function(grid4x4):
     def fun(x, y):
         return x**2 - y
@@ -51,7 +56,7 @@ def test_can_add_grid_functions(grid4x4):
 
     h = GridFunction.from_function(lambda x, y: x**2 - y + x + 2 * y**2, grid4x4)
 
-    np.testing.assert_allclose(s.tabulate(), h.tabulate())
+    assert_functions_equal(s, h)
 
 
 def test_can_add_constant_to_grid_function(grid4x4):
@@ -61,7 +66,7 @@ def test_can_add_constant_to_grid_function(grid4x4):
 
     h = GridFunction.from_function(lambda x, y: x**2 - y + 2, grid4x4)
 
-    np.testing.assert_allclose(s.tabulate(), h.tabulate())
+    assert_functions_equal(s, h)
 
 
 def test_can_add_grid_function_to_constant(grid4x4):
@@ -71,7 +76,7 @@ def test_can_add_grid_function_to_constant(grid4x4):
 
     h = GridFunction.from_function(lambda x, y: x**2 - y + 2, grid4x4)
 
-    np.testing.assert_allclose(s.tabulate(), h.tabulate())
+    assert_functions_equal(s, h)
 
 
 def test_can_subtract_grid_functions(grid4x4):
@@ -81,7 +86,7 @@ def test_can_subtract_grid_functions(grid4x4):
 
     h = GridFunction.from_function(lambda x, y: x**2 - y - x - 2 * y**2, grid4x4)
 
-    np.testing.assert_allclose(s.tabulate(), h.tabulate())
+    assert_functions_equal(s, h)
 
 
 def test_can_subtract_constant_from_grid_functions(grid4x4):
@@ -91,7 +96,7 @@ def test_can_subtract_constant_from_grid_functions(grid4x4):
 
     h = GridFunction.from_function(lambda x, y: x**2 - y - 2, grid4x4)
 
-    np.testing.assert_allclose(s.tabulate(), h.tabulate())
+    assert_functions_equal(s, h)
 
 
 def test_can_subtract_grid_function_from_constant(grid4x4):
@@ -101,7 +106,7 @@ def test_can_subtract_grid_function_from_constant(grid4x4):
 
     h = GridFunction.from_function(lambda x, y: 2 - x**2 + y, grid4x4)
 
-    np.testing.assert_allclose(s.tabulate(), h.tabulate())
+    assert_functions_equal(s, h)
 
 
 def test_can_multiply_grid_functions(grid4x4):
@@ -111,7 +116,7 @@ def test_can_multiply_grid_functions(grid4x4):
 
     h = GridFunction.from_function(lambda x, y: x**2 - y**2, grid4x4)
 
-    np.testing.assert_allclose(s.tabulate(), h.tabulate())
+    assert_functions_equal(s, h)
 
 
 def test_can_multiply_grid_function_by_constant(grid4x4):
@@ -121,7 +126,7 @@ def test_can_multiply_grid_function_by_constant(grid4x4):
 
     h = GridFunction.from_function(lambda x, y: 2 * (x - y), grid4x4)
 
-    np.testing.assert_allclose(s.tabulate(), h.tabulate())
+    assert_functions_equal(s, h)
 
 
 def test_can_multiply_constant_by_grid_function(grid4x4):
@@ -131,7 +136,7 @@ def test_can_multiply_constant_by_grid_function(grid4x4):
 
     h = GridFunction.from_function(lambda x, y: 2 * (x - y), grid4x4)
 
-    np.testing.assert_allclose(s.tabulate(), h.tabulate())
+    assert_functions_equal(s, h)
 
 
 def test_can_divide_grid_functions(grid4x4):
@@ -141,7 +146,7 @@ def test_can_divide_grid_functions(grid4x4):
 
     h = GridFunction.from_function(lambda x, y: (x + y) / (1 + x * y), grid4x4)
 
-    np.testing.assert_allclose(s.tabulate(), h.tabulate())
+    assert_functions_equal(s, h)
 
 
 def test_can_divide_grid_function_by_constant(grid4x4):
@@ -151,7 +156,7 @@ def test_can_divide_grid_function_by_constant(grid4x4):
 
     h = GridFunction.from_function(lambda x, y: (x + y) / 2, grid4x4)
 
-    np.testing.assert_allclose(s.tabulate(), h.tabulate())
+    assert_functions_equal(s, h)
 
 
 def test_can_divide_constant_by_grid_function(grid4x4):
@@ -161,7 +166,7 @@ def test_can_divide_constant_by_grid_function(grid4x4):
 
     h = GridFunction.from_function(lambda x, y: 1 / (1 + x * y), grid4x4)
 
-    np.testing.assert_allclose(s.tabulate(), h.tabulate())
+    assert_functions_equal(s, h)
 
 
 def test_can_raise_grid_function_to_grid_function_power(grid4x4):
@@ -171,7 +176,7 @@ def test_can_raise_grid_function_to_grid_function_power(grid4x4):
 
     h = GridFunction.from_function(lambda x, y: (x + y) ** (1 + x * y), grid4x4)
 
-    np.testing.assert_allclose(s.tabulate(), h.tabulate())
+    assert_functions_equal(s, h)
 
 
 def test_can_raise_grid_function_to_constant_power(grid4x4):
@@ -181,7 +186,7 @@ def test_can_raise_grid_function_to_constant_power(grid4x4):
 
     h = GridFunction.from_function(lambda x, y: (x + y) ** 2, grid4x4)
 
-    np.testing.assert_allclose(s.tabulate(), h.tabulate())
+    assert_functions_equal(s, h)
 
 
 def test_can_raise_constant_to_grid_function_power(grid4x4):
@@ -191,7 +196,7 @@ def test_can_raise_constant_to_grid_function_power(grid4x4):
 
     h = GridFunction.from_function(lambda x, y: 2 ** (x + y), grid4x4)
 
-    np.testing.assert_allclose(s.tabulate(), h.tabulate())
+    assert_functions_equal(s, h)
 
 
 def test_can_negate_grid_function(grid4x4):
@@ -200,7 +205,7 @@ def test_can_negate_grid_function(grid4x4):
 
     h = GridFunction.from_function(lambda x, y: -x - y, grid4x4)
 
-    np.testing.assert_allclose(s.tabulate(), h.tabulate())
+    assert_functions_equal(s, h)
 
 
 def test_can_take_abs_of_grid_function(grid4x4):
@@ -209,7 +214,7 @@ def test_can_take_abs_of_grid_function(grid4x4):
 
     h = GridFunction.from_function(lambda x, y: abs(x - y), grid4x4)
 
-    np.testing.assert_allclose(s.tabulate(), h.tabulate())
+    assert_functions_equal(s, h)
 
 
 def test_coord_functions(grid4x4):
@@ -218,8 +223,8 @@ def test_coord_functions(grid4x4):
     xx = GridFunction.from_function(lambda x, y: x, grid4x4)
     yy = GridFunction.from_function(lambda x, y: y, grid4x4)
 
-    np.testing.assert_allclose(x.tabulate(), xx.tabulate())
-    np.testing.assert_allclose(y.tabulate(), yy.tabulate())
+    assert_functions_equal(x, xx)
+    assert_functions_equal(y, yy)
 
 
 def test_cannot_combine_grid_functions_from_different_grids(grid4x4):
