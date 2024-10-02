@@ -118,7 +118,8 @@ class GridFunction:
         return self.fun(i, j)
 
     def tabulate(self):
-        array = np.fromfunction(self.fun, self.grid.shape, dtype=np.intp)
+        f = np.vectorize(self.fun)
+        array = np.fromfunction(f, self.grid.shape, dtype=np.intp)
         # Since arrays created by np.fromfunction have shape determined fully
         # by the function, broadcasting is required for constant functions
         return np.broadcast_to(array, self.grid.shape)
@@ -231,3 +232,10 @@ def integrate(f):
     grid = f.grid
     h = grid.h
     return h**2 * sum(f(*idx) for idx in grid.indices)
+
+
+def delta(i, j, grid):
+    def fun(p, q):
+        return 1.0 if (p, q) == (i, j) else 0.0
+
+    return GridFunction(fun, grid)
