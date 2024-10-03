@@ -239,3 +239,28 @@ def delta(i, j, grid):
         return 1.0 if (p, q) == (i, j) else 0.0
 
     return GridFunction(fun, grid)
+
+
+def _axis_index(axis):
+    match axis:
+        case "x":
+            return 0
+        case "y":
+            return 1
+        case _:
+            raise ValueError(f"Invalid axis: {axis}")
+
+
+def shift(f, axis, offset=1):
+    axis_idx = _axis_index(axis)
+
+    def fun(ix, iy):
+        idx = np.array([ix, iy])
+        idx[axis_idx] += offset
+
+        if not f.grid.index_valid(idx):
+            return 0
+
+        return f(*idx)
+
+    return GridFunction(fun, f.grid)
