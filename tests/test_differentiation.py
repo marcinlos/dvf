@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from dvf import GridFunction, diff, dx, dy, nabla
+from dvf import GridFunction, diff, div, dx, dy, nabla
 
 
 def assert_function_values_equal(actual, expected):
@@ -158,3 +158,26 @@ def test_zero_derivatives_at_the_boundary_have_correct_shapes(grid4x4):
     dfx = dy(f, "+")
 
     assert np.shape(dfx(4, 1)) == (2, 2)
+
+
+def test_can_compute_div_of_vector(grid4x4):
+    f = GridFunction.from_function(
+        lambda x, y: np.array([2 * x + y, 3 * x - y]), grid4x4
+    )
+    divf = div(f, "+")
+    expected = 2 - 1
+    actual = divf(0, 0)
+
+    assert actual == pytest.approx(expected)
+
+
+def test_can_compute_div_of_tensor(grid4x4):
+    f = GridFunction.from_function(
+        lambda x, y: np.array([[2 * x + y, x - y], [3 * x + 2 * y, -x + 2 * y]]),
+        grid4x4,
+    )
+    divf = div(f, "+")
+    expected = np.array([2 - 1, 3 + 2])
+    actual = divf(0, 0)
+
+    assert actual == pytest.approx(expected)

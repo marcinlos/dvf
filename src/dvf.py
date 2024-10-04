@@ -307,6 +307,11 @@ def nabla(f, mode):
     return combine(dx(f, mode), dy(f, mode))
 
 
+def div(f, mode):
+    # np.linalg.trace sums over the last two indices, unlike np.trace
+    return apply_to_gridfun(np.linalg.trace, nabla(f, mode))
+
+
 def norm(f, kind):
     return np.sqrt(product(f, f, kind))
 
