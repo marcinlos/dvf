@@ -261,7 +261,7 @@ def shift(f, axis, offset=1):
         idx[axis_idx] += offset
 
         if not f.grid.index_valid(idx):
-            return 0
+            return np.zeros_like(f(ix, iy))
 
         return f(*idx)
 
@@ -286,7 +286,7 @@ def diff(f, axis, mode):
         idx[axis_idx] += offset
 
         if not f.grid.index_valid(idx):
-            return 0
+            return np.zeros_like(f(ix, iy))
 
         current = f(ix, iy)
         other = f(*idx)
@@ -305,8 +305,8 @@ def dy(f, mode):
 
 
 def nabla(f, mode):
-    as_vec = lift_to_gridfun(lambda *xs: tuple(xs))
-    return as_vec(dx(f, mode), dy(f, mode))
+    combine = lift_to_gridfun(lambda *xs: np.stack(xs, axis=-1))
+    return combine(dx(f, mode), dy(f, mode))
 
 
 def norm(f, kind):
