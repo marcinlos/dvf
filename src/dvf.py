@@ -119,10 +119,7 @@ class GridFunction:
 
     def tabulate(self):
         f = np.vectorize(self.fun)
-        array = np.fromfunction(f, self.grid.shape, dtype=np.intp)
-        # Since arrays created by np.fromfunction have shape determined fully
-        # by the function, broadcasting is required for constant functions
-        return np.broadcast_to(array, self.grid.shape)
+        return np.fromfunction(f, self.grid.shape, dtype=np.intp)
 
     @staticmethod
     def from_function(fun, grid):
