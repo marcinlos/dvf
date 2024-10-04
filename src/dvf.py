@@ -118,8 +118,14 @@ class GridFunction:
         return self.fun(i, j)
 
     def tabulate(self):
-        f = np.vectorize(self.fun)
-        return np.fromfunction(f, self.grid.shape, dtype=np.intp)
+        sample = self.fun(0, 0)
+        out_shape = self.grid.shape + np.shape(sample)
+        out = np.empty(out_shape)
+
+        for idx in np.ndindex(*self.grid.shape):
+            out[*idx, ...] = self.fun(*idx)
+
+        return out
 
     @staticmethod
     def from_function(fun, grid):
@@ -259,5 +265,33 @@ def shift(f, axis, offset=1):
             return 0
 
         return f(*idx)
+
+    return GridFunction(fun, f.grid)
+
+
+def diff(f, axis, mode):
+    axis_idx = _axis_index(axis)
+
+    match mode:
+        case "+":
+            sign = -1
+            offset = +1
+        case "-":
+            sign = +1
+            offset = -1
+        case _:
+            raise ValueError(f"Invalid differentiation mode: {mode}")
+
+    def fun(ix, iy):
+        idx = np.array([ix, iy])
+        idx[axis_idx] += offset
+
+        if not f.grid.index_valid(idx):
+            return 0
+
+        current = f(ix, iy)
+        other = f(*idx)
+
+        return sign * (current - other) / f.grid.h
 
     return GridFunction(fun, f.grid)

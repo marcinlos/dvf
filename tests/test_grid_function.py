@@ -36,6 +36,44 @@ def test_can_tabulate_values(grid4x4):
     np.testing.assert_allclose(actual, expected)
 
 
+def test_can_tabulate_function_returning_tuple(grid4x4):
+    def fun(i, j):
+        return (i, j)
+
+    f = GridFunction(fun, grid4x4)
+    actual = f.tabulate()
+
+    x, y = np.meshgrid([0, 1, 2, 3], [0, 1, 2, 3])
+    np.testing.assert_allclose(actual[..., 0], x.T)
+    np.testing.assert_allclose(actual[..., 1], y.T)
+
+
+def test_can_tabulate_function_returning_1d_array(grid4x4):
+    def fun(i, j):
+        return np.array((i, j))
+
+    f = GridFunction(fun, grid4x4)
+    actual = f.tabulate()
+
+    x, y = np.meshgrid([0, 1, 2, 3], [0, 1, 2, 3])
+    np.testing.assert_allclose(actual[..., 0], x.T)
+    np.testing.assert_allclose(actual[..., 1], y.T)
+
+
+def test_can_tabulate_function_returning_2d_array(grid4x4):
+    def fun(i, j):
+        return np.array([[i, j], [-j, -i]])
+
+    f = GridFunction(fun, grid4x4)
+    actual = f.tabulate()
+
+    x, y = np.meshgrid([0, 1, 2, 3], [0, 1, 2, 3])
+    np.testing.assert_allclose(actual[..., 0, 0], x.T)
+    np.testing.assert_allclose(actual[..., 0, 1], y.T)
+    np.testing.assert_allclose(actual[..., 1, 0], -y.T)
+    np.testing.assert_allclose(actual[..., 1, 1], -x.T)
+
+
 def test_tabulate_returns_correct_shape_for_constant_function(grid4x4):
     f = GridFunction.const(3, grid4x4)
     data = f.tabulate()
