@@ -11,9 +11,7 @@ class Edge(Flag):
     BOTTOM = auto()
     LEFT = auto()
     RIGHT = auto()
-
-
-ALL_EDGES = Edge.TOP | Edge.BOTTOM | Edge.LEFT | Edge.RIGHT
+    ALL = TOP | BOTTOM | LEFT | RIGHT
 
 
 class Grid:
@@ -61,7 +59,7 @@ class Grid:
         """
         return np.ravel_multi_index(idx, self.shape, order="F")
 
-    def boundary(self, edges=ALL_EDGES):
+    def boundary(self, edges=Edge.ALL):
         """
         Enumerate indices of boundary points.
 
