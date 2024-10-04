@@ -1,3 +1,4 @@
+import functools
 import operator
 from enum import Flag, auto
 
@@ -104,9 +105,20 @@ def _lift(op, *fs):
     return composite
 
 
-def _lift_to_gridfun(f, gridfun):
-    fun = _lift(f, gridfun)
-    return GridFunction(fun, gridfun.grid)
+def _ensure_grid_equality(first, *other):
+    for f in other:
+        if f.grid is not first.grid:
+            raise ValueError(f"Grids do not match: {f.grid} =/= {first.grid}")
+
+
+def apply_to_gridfun(op, f, *fs):
+    _ensure_grid_equality(f, *fs)
+    fun = _lift(op, f, *fs)
+    return GridFunction(fun, f.grid)
+
+
+def lift_to_gridfun(op):
+    return functools.partial(apply_to_gridfun, op)
 
 
 class GridFunction:
@@ -152,17 +164,11 @@ class GridFunction:
         y = GridFunction.from_function(lambda x, y: y, grid)
         return x, y
 
-    def _ensure_same_grid(self, other):
-        if self.grid is not other.grid:
-            raise ValueError(f"Grids do not match: {self.grid} =/= {other.grid}")
-
     def _binop(self, op, other):
         if not isinstance(other, GridFunction):
             other = GridFunction.const(other, self.grid)
 
-        self._ensure_same_grid(other)
-        fun = _lift(op, self.fun, other.fun)
-        return GridFunction(fun, self.grid)
+        return apply_to_gridfun(op, self, other)
 
     def _rev_binop(self, op, other):
         def reversed_op(a, b):
@@ -201,34 +207,27 @@ class GridFunction:
         return self._rev_binop(operator.pow, other)
 
     def __neg__(self):
-        return _lift_to_gridfun(operator.neg, self)
+        return apply_to_gridfun(operator.neg, self)
 
     def __abs__(self):
-        return _lift_to_gridfun(operator.abs, self)
+        return apply_to_gridfun(operator.abs, self)
 
 
-def _as_gridfun_function(f):
-    def fun(gridfun):
-        return _lift_to_gridfun(f, gridfun)
-
-    return fun
-
-
-sin = _as_gridfun_function(np.sin)
-cos = _as_gridfun_function(np.cos)
-tan = _as_gridfun_function(np.tan)
-asin = _as_gridfun_function(np.asin)
-acos = _as_gridfun_function(np.acos)
-atan = _as_gridfun_function(np.atan)
-sinh = _as_gridfun_function(np.sinh)
-cosh = _as_gridfun_function(np.cosh)
-tanh = _as_gridfun_function(np.tanh)
-asinh = _as_gridfun_function(np.asinh)
-acosh = _as_gridfun_function(np.acosh)
-atanh = _as_gridfun_function(np.atanh)
-exp = _as_gridfun_function(np.exp)
-log = _as_gridfun_function(np.log)
-sqrt = _as_gridfun_function(np.sqrt)
+sin = lift_to_gridfun(np.sin)
+cos = lift_to_gridfun(np.cos)
+tan = lift_to_gridfun(np.tan)
+asin = lift_to_gridfun(np.asin)
+acos = lift_to_gridfun(np.acos)
+atan = lift_to_gridfun(np.atan)
+sinh = lift_to_gridfun(np.sinh)
+cosh = lift_to_gridfun(np.cosh)
+tanh = lift_to_gridfun(np.tanh)
+asinh = lift_to_gridfun(np.asinh)
+acosh = lift_to_gridfun(np.acosh)
+atanh = lift_to_gridfun(np.atanh)
+exp = lift_to_gridfun(np.exp)
+log = lift_to_gridfun(np.log)
+sqrt = lift_to_gridfun(np.sqrt)
 
 
 def integrate(f):
