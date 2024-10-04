@@ -294,3 +294,33 @@ def diff(f, axis, mode):
         return sign * (current - other) / f.grid.h
 
     return GridFunction(fun, f.grid)
+
+
+def dx(f, mode):
+    return diff(f, "x", mode)
+
+
+def dy(f, mode):
+    return diff(f, "y", mode)
+
+
+def nabla(f, mode):
+    as_vec = lift_to_gridfun(lambda *xs: tuple(xs))
+    return as_vec(dx(f, mode), dy(f, mode))
+
+
+def norm(f, kind):
+    return np.sqrt(product(f, f, kind))
+
+
+def product(f, g, kind):
+    match kind:
+        case "h":
+            fun = f * g
+        case "grad_h":
+            dot = lift_to_gridfun(np.dot)
+            fun = dot(nabla(f, "+"), nabla(g, "+"))
+        case _:
+            raise ValueError(f"Invalid norm: {kind}")
+
+    return integrate(fun)
