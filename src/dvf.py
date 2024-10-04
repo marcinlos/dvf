@@ -250,6 +250,12 @@ def integrate(f):
     return h**2 * sum(f(*idx) for idx in grid.indices)
 
 
+def integrate_bd(f):
+    grid = f.grid
+    h = grid.h
+    return h * sum(f(*idx) for idx in grid.boundary())
+
+
 def delta(i, j, grid):
     def fun(p, q):
         return 1.0 if (p, q) == (i, j) else 0.0
