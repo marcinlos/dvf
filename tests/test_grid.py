@@ -222,3 +222,22 @@ def test_adjacent_corner(grid5x5):
     expected = {(3, 0), (3, 1), (4, 1)}
     actual = grid5x5.adjacent((4, 0))
     assert Counter(actual) == Counter(expected)
+
+
+def test_boundary_normals(grid4x4):
+    expected = {
+        (0, 0): (-1, -1),
+        (1, 0): (0, -1),
+        (2, 0): (0, -1),
+        (3, 0): (1, -1),
+        (3, 1): (1, 0),
+        (3, 2): (1, 0),
+        (3, 3): (1, 1),
+        (2, 3): (0, 1),
+        (1, 3): (0, 1),
+        (0, 3): (-1, 1),
+        (0, 2): (-1, 0),
+        (0, 1): (-1, 0),
+    }
+    actual = {idx: tuple(grid4x4.boundary_normal(idx)) for idx in expected}
+    assert actual == expected

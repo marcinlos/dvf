@@ -86,6 +86,22 @@ class Grid:
             if Edge.BOTTOM not in edges:
                 yield (self.n, self.n)
 
+    def boundary_normal(self, idx):
+        out = np.zeros(2)
+        i, j = idx
+
+        if i == 0:
+            out[0] = -1
+        elif i == self.n:
+            out[0] = 1
+
+        if j == 0:
+            out[1] = -1
+        elif j == self.n:
+            out[1] = 1
+
+        return out
+
     def adjacent(self, idx):
         i, j = idx
         for a in (i - 1, i, i + 1):
