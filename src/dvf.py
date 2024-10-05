@@ -145,11 +145,11 @@ class GridFunction:
 
     def tabulate(self):
         sample = self.fun(0, 0)
-        out_shape = self.grid.shape + np.shape(sample)
+        out_shape = np.shape(sample) + self.grid.shape
         out = np.empty(out_shape)
 
         for idx in np.ndindex(*self.grid.shape):
-            out[*idx, ...] = self.fun(*idx)
+            out[..., *idx] = self.fun(*idx)
 
         return out
 
