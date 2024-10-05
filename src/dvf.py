@@ -244,6 +244,35 @@ log = lift_to_gridfun(np.log)
 sqrt = lift_to_gridfun(np.sqrt)
 
 
+def as_tensor(a):
+    def grids(a):
+        if isinstance(a, GridFunction):
+            yield a.grid
+        try:
+            for x in a:
+                yield from grids(x)
+        except TypeError:
+            pass
+
+    grid_list = list(grids(a))
+
+    def fun(i, j):
+        def evaluate(a):
+            if isinstance(a, GridFunction):
+                return a(i, j)
+
+            try:
+                return tuple(evaluate(x) for x in a)
+            except TypeError:
+                # assume it is a constant
+                return a
+
+        return np.array(evaluate(a))
+
+    grid = grid_list[0]
+    return GridFunction(fun, grid)
+
+
 def integrate(f):
     grid = f.grid
     h = grid.h

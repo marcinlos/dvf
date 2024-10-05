@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 
 import dvf
-from dvf import Grid, GridFunction
+from dvf import Grid, GridFunction, as_tensor
 
 
 def assert_functions_equal(actual, expected):
@@ -305,3 +305,56 @@ def test_can_apply_functions_to_grid_function(dvf_fun, fun, grid4x4):
     )
 
     assert_functions_equal(s, h)
+
+
+def test_can_apply_as_tensor_to_scalar(grid4x4):
+    f = GridFunction.from_function(lambda x, y: x + y, grid4x4)
+    actual = as_tensor(f)
+    assert_functions_equal(actual, f)
+
+
+def test_can_combine_grid_functions_into_vector_field(grid4x4):
+    f = GridFunction.from_function(lambda x, y: x + y, grid4x4)
+    g = GridFunction.from_function(lambda x, y: 2 * x - y, grid4x4)
+
+    actual = as_tensor([f, g])
+    expected = GridFunction.from_function(
+        lambda x, y: np.array([x + y, 2 * x - y]), grid4x4
+    )
+
+    assert_functions_equal(actual, expected)
+
+
+def test_can_combine_grid_functions_into_tensor_field(grid4x4):
+    f11 = GridFunction.from_function(lambda x, y: x + y, grid4x4)
+    f12 = GridFunction.from_function(lambda x, y: 2 * x - y, grid4x4)
+    f21 = GridFunction.from_function(lambda x, y: x - 2 * y, grid4x4)
+    f22 = GridFunction.from_function(lambda x, y: 3 * x + y, grid4x4)
+
+    actual = as_tensor([[f11, f12], [f21, f22]])
+    expected = GridFunction.from_function(
+        lambda x, y: np.array([[x + y, 2 * x - y], [x - 2 * y, 3 * x + y]]), grid4x4
+    )
+
+    assert_functions_equal(actual, expected)
+
+
+def test_can_combine_grid_functions_with_constants(grid4x4):
+    f = GridFunction.from_function(lambda x, y: x + y, grid4x4)
+
+    actual = as_tensor([f, 1])
+    expected = GridFunction.from_function(lambda x, y: np.array([x + y, 1]), grid4x4)
+
+    assert_functions_equal(actual, expected)
+
+
+def test_can_combine_grid_functions_with_constant_arrays(grid4x4):
+    f11 = GridFunction.from_function(lambda x, y: x + y, grid4x4)
+    f12 = GridFunction.from_function(lambda x, y: 2 * x - y, grid4x4)
+
+    actual = as_tensor([[f11, f12], [1, 3]])
+    expected = GridFunction.from_function(
+        lambda x, y: np.array([[x + y, 2 * x - y], [1, 3]]), grid4x4
+    )
+
+    assert_functions_equal(actual, expected)
