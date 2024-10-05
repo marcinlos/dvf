@@ -36,6 +36,27 @@ def test_can_tabulate_values(grid4x4):
     np.testing.assert_allclose(actual, expected)
 
 
+def test_tabulate_is_same_as_evaluating_on_points(grid4x4):
+    def fun(x, y):
+        return x + 2 * y
+
+    f = GridFunction.from_function(fun, grid4x4)
+
+    X, Y = grid4x4.points
+
+    np.testing.assert_allclose(f.tabulate(), X + 2 * Y)
+
+
+def test_raveled_tabulate_is_consistent_with_grid_ravel_index(grid4x4):
+    def fun(i, j):
+        return grid4x4.ravel_index((i, j))
+
+    f = GridFunction(fun, grid4x4)
+    expected = np.arange(grid4x4.size)
+    data = np.ravel(f.tabulate())
+    np.testing.assert_allclose(data, expected)
+
+
 def test_can_tabulate_function_returning_tuple(grid4x4):
     def fun(i, j):
         return (i, j)

@@ -55,9 +55,9 @@ class Grid:
         """
         Linearize the index.
 
-        The order is such that the `x` index changes fastest.
+        The order is such that the `y` index changes fastest.
         """
-        return np.ravel_multi_index(idx, self.shape, order="F")
+        return np.ravel_multi_index(idx, self.shape)
 
     def boundary(self, edges=Edge.ALL):
         """

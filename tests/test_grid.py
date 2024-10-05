@@ -203,7 +203,7 @@ def test_shape(grid3x3):
 
 
 def test_ravel_index(grid3x3):
-    assert grid3x3.ravel_index((1, 2)) == 2 * 3 + 1
+    assert grid3x3.ravel_index((1, 2)) == 1 * 3 + 2
 
 
 def test_adjacent_interior(grid5x5):
