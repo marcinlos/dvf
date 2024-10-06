@@ -28,23 +28,29 @@
 # $$
 
 # %%
+import matplotlib.pyplot as plt
 import numpy as np
+import scipy
 
 import dvf
 from dvf import (
     Edge,
+    FunctionSpace,
     Grid,
     GridFunction,
+    assemble,
     div,
     dx,
     integrate,
     integrate_bd,
+    lift_to_gridfun,
+    nabla,
     norm,
     shift,
 )
 
 # %%
-grid = Grid(4)
+grid = Grid(20)
 
 
 # %%
@@ -161,3 +167,72 @@ check_eigen(3, 3)
 
 # %%
 print(f"Lower bound (paper): {grid.h / (2*np.sqrt(2))}")
+
+# %% [markdown]
+# To get the exact values, we need to look at the generalized eigenvalue problem
+# \begin{equation}
+# Ax = \lambda M x
+# \end{equation}
+# where $A$ is the Gram matrix of the $(\nabla, h)$-scalar product, and $M$ -- of the
+# $h$-scalar product on $D_{0, h}$.
+
+# %%
+U = FunctionSpace(grid)
+u = U.trial_function()
+v = U.test_function()
+
+A = np.zeros((U.dim, U.dim))
+M = np.zeros((U.dim, U.dim))
+
+assemble(u * v, M, u, v)
+dot = lift_to_gridfun(np.dot)
+assemble(dot(nabla(u, "+"), nabla(v, "+")), A, u, v)
+
+to_remove = [grid.ravel_index(idx) for idx in grid.boundary()]
+A = np.delete(np.delete(A, to_remove, axis=0), to_remove, axis=1)
+M = np.delete(np.delete(M, to_remove, axis=0), to_remove, axis=1)
+
+# %%
+w, vr = scipy.linalg.eig(A, M)
+
+# %% [markdown]
+# Eigenvalues should all be real and positive.
+
+# %%
+print(f"Real? {np.all(np.real(w) == w)}")
+w = np.real(w)
+print(f"Positive? {np.all(w > 0)}")
+
+# %%
+vals = 1 / np.sqrt(w)
+
+# %%
+order = np.argsort(vals)
+imin = order[0]
+imax = order[-1]
+
+# %%
+print(f"c = {vals[imin]}")
+print(f"C = {vals[imax]}")
+
+
+# %%
+def on_grid(eigfun):
+    data = np.zeros(grid.shape)
+    data[1:-1, 1:-1] = eigfun.reshape((grid.n - 1, grid.n - 1))
+    return data
+
+
+fig, axs = plt.subplots(1, 3, figsize=(15, 5))
+
+axs[0].imshow(on_grid(vr[:, imin].T))
+axs[0].set_title(f"minimum q = {vals[imin]:6.5f}")
+
+axs[1].imshow(on_grid(vr[:, imax].T))
+axs[1].set_title(f"maximum q = {vals[imax]:6.5f}")
+
+N = w.size
+k = int(N * 0.88)
+idx = order[k]
+axs[2].imshow(on_grid(vr[:, idx].T))
+axs[2].set_title(f"eig {k}, q = {vals[idx]:6.5f}")
