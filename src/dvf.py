@@ -285,11 +285,11 @@ def integrate_bd(f):
     return h * sum(f(*idx) for idx in grid.boundary())
 
 
-def delta(i, j, grid):
+def delta(idx, /, equal=1.0, not_equal=0.0):
     def fun(p, q):
-        return 1.0 if (p, q) == (i, j) else 0.0
+        return equal if (p, q) == idx else not_equal
 
-    return GridFunction(fun, grid)
+    return fun
 
 
 def _axis_index(axis):
@@ -378,3 +378,213 @@ def product(f, g, kind):
             raise ValueError(f"Invalid norm: {kind}")
 
     return integrate(fun)
+
+
+class FunctionVariable(GridFunction):
+    def __init__(self, space):
+        super().__init__(self._eval, space.grid)
+        self.space = space
+        self._source_fun = None
+
+    def _eval(self, i, j):
+        if self._source_fun is None:
+            return self.space.zero
+        else:
+            return self._source_fun(i, j)
+
+    def assign(self, fun):
+        self._source_fun = fun
+
+    def clear(self):
+        self.assign(None)
+
+
+class FunctionSpace:
+    def __init__(self, grid):
+        self.grid = grid
+        self.zero = 0
+
+    @property
+    def dim(self):
+        return self.grid.size
+
+    @property
+    def shape(self):
+        return ()
+
+    def basis_at(self, point_idx):
+        f = delta(point_idx)
+        fun = GridFunction(f, self.grid)
+        idx = self.grid.ravel_index(point_idx)
+        fun.index = idx
+        yield fun
+
+    def trial_function(self):
+        return FunctionVariable(self)
+
+    def test_function(self):
+        return self.trial_function()
+
+
+class VectorFunctionSpace:
+    def __init__(self, grid, components):
+        self.grid = grid
+        self.components = components
+
+        self.zero = np.zeros(components)
+        self.local_basis = np.identity(components)
+
+    @property
+    def dim(self):
+        return self.grid.size * self.components
+
+    @property
+    def shape(self):
+        return (self.components,)
+
+    def basis_at(self, point_idx):
+        offset = self.grid.ravel_index(point_idx)
+
+        for i in range(self.components):
+            one = self.local_basis[i, :]
+            f = delta(point_idx, one, self.zero)
+            fun = GridFunction(f, self.grid)
+
+            base = i * self.grid.size
+            fun.index = base + offset
+            fun.component = (i,)
+            yield fun
+
+    def trial_function(self):
+        return FunctionVariable(self)
+
+    def test_function(self):
+        return self.trial_function()
+
+
+class TensorFunctionSpace:
+    def __init__(self, grid, shape):
+        self.grid = grid
+        self.shape = shape
+        self.zero = np.zeros(self.shape)
+
+        self.local_basis = np.zeros(shape + shape)
+        for idx in np.ndindex(*shape):
+            self.local_basis[*idx, *idx] = 1
+
+    @property
+    def dim(self):
+        return self.grid.size * np.prod(self.shape)
+
+    def basis_at(self, point_idx):
+        offset = self.grid.ravel_index(point_idx)
+
+        for comp_idx in np.ndindex(*self.shape):
+            one = self.local_basis[*comp_idx, ...]
+            f = delta(point_idx, one, self.zero)
+            fun = GridFunction(f, self.grid)
+
+            base = np.ravel_multi_index(comp_idx, self.shape) * self.grid.size
+            fun.index = base + offset
+            fun.component = comp_idx
+            yield fun
+
+    def trial_function(self):
+        return FunctionVariable(self)
+
+    def test_function(self):
+        return self.trial_function()
+
+
+class CompositeBasisFunction:
+    def __init__(self, components, index):
+        self.components = components
+        self.index = index
+
+
+class CompositeFunctionVariable:
+    def __init__(self, space, components):
+        self.space = space
+        self.components = components
+
+    def assign(self, fun):
+        for c, f in zip(self.components, fun.components, strict=True):
+            c.assign(f)
+
+    def clear(self):
+        for c in self.components():
+            c.clear()
+
+
+class CompositeFunctionSpace:
+    def __init__(self, *spaces):
+        _ensure_grid_equality(*spaces)
+        self.spaces = spaces
+        self.grid = spaces[0].grid
+        self.zero = tuple(space.zero for space in self.spaces)
+        self.zero_funs = tuple(GridFunction.const(z, self.grid) for z in self.zero)
+
+    @property
+    def dim(self):
+        return sum(U.dim for U in self.spaces)
+
+    def basis_at(self, point_idx):
+        offset = 0
+
+        for i, space in enumerate(self.spaces):
+            for f in space.basis_at(point_idx):
+                components = list(self.zero_funs)
+                components[i] = f
+                index = offset + f.index
+                yield CompositeBasisFunction(components, index)
+
+            offset += space.dim
+
+    def trial_function(self):
+        trial_funs = tuple(space.trial_function() for space in self.spaces)
+        return CompositeFunctionVariable(self, trial_funs)
+
+    def test_function(self):
+        test_funs = tuple(space.test_function() for space in self.spaces)
+        return CompositeFunctionVariable(self, test_funs)
+
+
+def _relevant_points(p, grid):
+    # assuming first-order differential operators, it is enough to consider the
+    # cross-shaped stenicil
+    dirs = np.array([[-1, 0], [1, 0], [0, 1], [0, -1]])
+
+    out = [p]
+
+    for d in dirs:
+        pp = p + d
+        if grid.index_valid(pp):
+            out.append(tuple(pp))
+
+    return out
+
+
+def _relevant_basis_funs(space, points):
+    def gen():
+        for p in points:
+            yield from space.basis_at(p)
+
+    return list(gen())
+
+
+def assemble(form, matrix, trial_fun, test_fun):
+    U = trial_fun.space
+    V = test_fun.space
+
+    grid = U.grid
+
+    for p in grid.indices:
+        pts = _relevant_points(p, grid)
+        trial_basis = _relevant_basis_funs(U, pts)
+        test_basis = _relevant_basis_funs(V, pts)
+
+        for u in trial_basis:
+            for v in test_basis:
+                trial_fun.assign(u)
+                test_fun.assign(v)
+                matrix[v.index, u.index] += grid.h**2 * form(*p)
