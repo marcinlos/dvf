@@ -110,6 +110,15 @@ def test_can_create_from_array(grid4x4):
     np.testing.assert_allclose(actual, data)
 
 
+def test_can_create_vector_function_from_array(grid4x4):
+    data = np.arange(2 * grid4x4.size).reshape(2, *grid4x4.shape)
+    f = GridFunction.from_array(data, grid4x4)
+
+    actual = f.tabulate()
+
+    np.testing.assert_allclose(actual, data)
+
+
 def test_can_add_grid_functions(grid4x4):
     f = GridFunction.from_function(lambda x, y: x**2 - y, grid4x4)
     g = GridFunction.from_function(lambda x, y: x + 2 * y**2, grid4x4)

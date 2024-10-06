@@ -164,7 +164,7 @@ class GridFunction:
     @staticmethod
     def from_array(data, grid):
         def index_fun(i, j):
-            return data[i, j]
+            return data[..., i, j]
 
         return GridFunction(index_fun, grid)
 
