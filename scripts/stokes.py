@@ -13,6 +13,7 @@
 # ---
 
 # %%
+import matplotlib.pyplot as plt
 import numpy as np
 
 from dvf import (
@@ -164,3 +165,123 @@ A_ @ np.linalg.inv(M_) @ AT_
 
 # %%
 np.max(np.abs(A_ @ np.linalg.inv(M_) @ AT_ - AT_p_))
+
+# %%
+np.linalg.matrix_rank(A_)
+
+
+# %%
+def rhs1(x, y):
+    xx = x * x
+    yy = y * y
+    ex = np.exp(x)
+    px = (
+        ex
+        * (y - 1)
+        * y
+        * (
+            x**4 * (yy - y + 12)
+            + 6 * x**3 * (yy - y - 4)
+            + xx * (yy - y + 12)
+            - 8 * x * (y - 1) * y
+            + 2 * (y - 1) * y
+        )
+    )
+
+    Lux = (
+        2
+        * ex
+        * (
+            x**4 * (2 * y**3 - 3 * yy + 13 * y - 6)
+            + 6 * x**3 * (2 * y**3 - 3 * yy - 3 * y + 2)
+            + xx * (2 * y**3 - 3 * yy + 13 * y - 6)
+            - 8 * x * y * (2 * yy - 3 * y + 1)
+            + 2 * y * (2 * yy - 3 * y + 1)
+        )
+    )
+
+    res = -Lux + px
+    return res
+
+
+def rhs2(x, y):
+    xx = x * x
+    yy = y * y
+    ex = np.exp(x)
+
+    py = (
+        2
+        * (2 * y - 1)
+        * (
+            ex
+            * (
+                x**4 * (yy - y + 6)
+                + 2 * x**3 * (yy - y - 18)
+                + xx * (-5 * yy + 5 * y + 114)
+                + 2 * x * (yy - y - 114)
+                + 228
+            )
+            - 228
+        )
+    )
+
+    Luy = -ex * (
+        x**4 * (y**4 - 2 * y**3 + 13 * yy - 12 * y + 2)
+        + 2 * x**3 * (5 * y**4 - 10 * y**3 + 17 * yy - 12 * y + 2)
+        + xx * (19 * y**4 - 38 * y**3 - 41 * yy + 60 * y - 10)
+        + x * (-6 * y**4 + 12 * y**3 + 18 * yy - 24 * y + 4)
+        - 6 * (y - 1) ** 2 * yy
+    )
+
+    res = -Luy + py
+    return res
+
+
+# %%
+def exact_solution_u1(x, y):
+    xx = x * x
+    yy = y * y
+    ex = np.exp(x)
+    res = (
+        2 * ex * (-1 + x) ** 2 * xx * (yy - y) * (-1 + 2 * y)
+    )  # tutaj (yy+y) na (yy-y)
+    return res
+
+
+# %%
+def exact_solution_u2(x, y):
+    yy = y * y
+    ex = np.exp(x)
+    res = -ex * (-1 + x) * x * (-2 + x * (3 + x)) * (-1 + y) * (-1 + y) * yy
+    return res
+
+
+# %%
+def exact_solution_p(x, y):
+    xx = x * x
+    yy = y * y
+    ex = np.exp(x)
+    res = (
+        -424
+        + 156 * 2.718
+        + (yy - y)
+        * (
+            -456
+            + ex
+            * (
+                456
+                + xx * (228 - 5 * (yy - y))
+                + 2 * x * (-228 + (yy - y))
+                + 2 * x**3 * (-36 + (yy - y))
+                + x**4 * (12 + (yy - y))
+            )
+        )
+    ) + 0.0435
+    return res
+
+
+# %%
+X, Y = grid.points
+
+# %%
+plt.imshow(exact_solution_p(X, Y).T)
