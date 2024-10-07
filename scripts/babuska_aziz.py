@@ -132,7 +132,7 @@ vy_data = np.zeros(grid.shape)
 vx_data[1:-1, 1:-1] = vx_vec.reshape((grid.n - 1, grid.n - 1))
 vy_data[1:-1, 1:-1] = vy_vec.reshape((grid.n - 1, grid.n - 1))
 
-v_data = np.stack([vx_data, vy_data], axis=-1)
+v_data = np.stack([vx_data, vy_data])
 v = GridFunction.from_array(v_data, grid)
 
 unit_p_data = np.ones(grid.shape)
@@ -290,5 +290,3 @@ plt.ylabel("inf-sup constant")
 plt.xlabel("grid size (N)")
 plt.title("inf-sup constant as a function of grid size")
 plt.show()
-
-# %%

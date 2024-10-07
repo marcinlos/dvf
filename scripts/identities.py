@@ -55,7 +55,7 @@ grid = Grid(20)
 
 # %%
 def random_function(grid, *, shape=(), zero_bd=Edge.NONE):
-    data = np.random.rand(*grid.shape, *shape)
+    data = np.random.rand(*shape, *grid.shape)
     ids = np.fromiter(grid.boundary(zero_bd), dtype=np.dtype((np.intp, 2)))
     data[*ids.T] = 0
     return GridFunction.from_array(data, grid)
