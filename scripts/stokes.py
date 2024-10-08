@@ -130,6 +130,10 @@ def random_functions():
     u = GridFunction.from_array(u_data, grid)
 
     p_data = np.random.rand(*grid.shape)
+
+    mask = np.ones(grid.shape)
+    mask.flat[P_bc] = 0
+    p_data -= np.sum(p_data * mask) / np.sum(mask)
     p_data.flat[P_bc] = 0
     p = GridFunction.from_array(p_data, grid)
 
@@ -723,3 +727,12 @@ error = np.linalg.norm(
     )
 )
 print(f"Error: {error}")
+
+# %%
+print(f"difference: {np.abs(residuum_norm - error)}")
+
+# %% [markdown]
+# Adjoin graph norm Gram matrix is $G_* = M + A M^{-1} A^*$
+
+# %%
+G2_ = M_ + A_ @ A_.T / grid.h**2
