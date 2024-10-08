@@ -736,3 +736,46 @@ print(f"difference: {np.abs(residuum_norm - error)}")
 
 # %%
 G2_ = M_ + A_ @ A_.T / grid.h**2
+
+# %%
+residuum2_rep = np.linalg.solve(G2_, residuum_vec)
+residuum2_norm = np.sqrt(np.dot(residuum_vec, residuum2_rep))
+print(f"Residuum v2 norm: {residuum2_norm}")
+
+# %%
+print(f"error / √loss = {error / residuum2_norm}")
+
+# %%
+R_ = A_.T @ np.linalg.solve(G2_, A_)
+
+# %%
+w, vr = scipy.linalg.eig(R_, M_)
+
+# %%
+print(f"largest imag: {np.max(np.abs(np.imag(w)))}")
+w = np.real(w)
+print(f"minimum: {np.min(w)}")
+print(np.sort(w)[:10])
+w = np.abs(w)
+
+# %%
+order = np.argsort(w)
+imin = order[1]  # skip 0
+imax = order[-1]
+
+# %%
+vals = np.sqrt(w)
+
+# %%
+print(f"inf-sup constant: {vals[imin]}")
+
+# %%
+print(f"continuity constant: {vals[imax]}")
+
+# %%
+plt.plot(vals[order])
+
+# %%
+gamma = vals[imin]
+C = vals[imax]
+print(f"{1/C} < |error|/√loss < {1/gamma}")
