@@ -549,6 +549,19 @@ class CompositeFunctionSpace:
         return CompositeFunctionVariable(self, test_funs)
 
 
+def select_dofs(space, condition, invert=False):
+    def gen():
+        for idx in space.grid.indices:
+            for u in space.basis_at(idx):
+                result = u(*idx) * condition(*idx)
+                matches = np.any(result)
+
+                if matches != invert:
+                    yield u.index
+
+    return np.array(list(gen()), dtype=np.intp)
+
+
 def _relevant_points(p, grid):
     # assuming first-order differential operators, it is enough to consider the
     # cross-shaped stenicil

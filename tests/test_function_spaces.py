@@ -6,6 +6,7 @@ from dvf import (
     FunctionSpace,
     TensorFunctionSpace,
     VectorFunctionSpace,
+    select_dofs,
 )
 
 
@@ -143,3 +144,66 @@ def test_composite_function_space_basis_index_matches_raveled_tabulate(W, grid4x
     expected[u.index] = 1
 
     np.testing.assert_allclose(values, expected)
+
+
+def test_can_select_dofs_of_function_space(grid4x4, U):
+    def condition(i, j):
+        return i == j
+
+    actual = select_dofs(U, condition)
+    expected = [0, 5, 10, 15]
+
+    assert set(actual) == set(expected)
+
+
+def test_can_select_dofs_of_vector_space(grid4x4, U3):
+    def condition(i, j):
+        return np.array([i == 0, j == 0, i == j])
+
+    actual = select_dofs(U3, condition)
+    expected = [0, 1, 2, 3] + [16, 20, 24, 28] + [32, 37, 42, 47]
+
+    assert set(actual) == set(expected)
+
+
+def test_can_select_dofs_of_vector_space_using_mask(grid4x4, U3):
+    def mask(i, j):
+        return np.array([i != 0, j != 0, i != j])
+
+    actual = select_dofs(U3, mask, invert=True)
+    expected = [0, 1, 2, 3] + [16, 20, 24, 28] + [32, 37, 42, 47]
+
+    assert set(actual) == set(expected)
+
+
+def test_can_select_dofs_of_vector_space_using_numeric_mask(grid4x4, U3):
+    def mask(i, j):
+        return np.array([i, j, i - j])
+
+    actual = select_dofs(U3, mask, invert=True)
+    expected = [0, 1, 2, 3] + [16, 20, 24, 28] + [32, 37, 42, 47]
+
+    assert set(actual) == set(expected)
+
+
+def test_can_select_dofs_of_tensor_space(grid4x4, U3x2):
+    def condition(i, j):
+        return np.array(
+            [
+                [False, i == 0],
+                [j == 0, j in (0, grid4x4.n)],
+                [False, i * j == 0],
+            ]
+        )
+
+    actual = select_dofs(U3x2, condition)
+    expected = (
+        [16, 17, 18, 19]
+        + [32, 36, 40, 44]
+        + [48, 52, 56, 60]
+        + [51, 55, 59, 63]
+        + [80, 81, 82, 83]
+        + [84, 88, 92]
+    )
+
+    assert set(actual) == set(expected)
