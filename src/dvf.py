@@ -557,6 +557,22 @@ class CompositeFunctionSpace:
         test_funs = tuple(space.test_function() for space in self.spaces)
         return CompositeFunctionVariable(self, test_funs)
 
+    def combine_dofs(self, *dof_sets):
+        if len(dof_sets) != len(self.spaces):
+            raise ValueError(
+                f"Invalid number of DoF sets ({len(dof_sets)} =/= {len(self.spaces)})"
+            )
+
+        offset = 0
+        combined_dofs = []
+
+        for dofs, space in zip(dof_sets, self.spaces, strict=True):
+            shifted = np.array(dofs) + offset
+            combined_dofs.extend(shifted)
+            offset += space.dim
+
+        return combined_dofs
+
 
 def select_dofs(space, condition, invert=False):
     def gen():

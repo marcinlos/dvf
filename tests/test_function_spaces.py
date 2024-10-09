@@ -207,3 +207,16 @@ def test_can_select_dofs_of_tensor_space(grid4x4, U3x2):
     )
 
     assert set(actual) == set(expected)
+
+
+def test_can_combine_composite_function_space_component_bcs(W, U, U3, U3x2):
+    U_bc = [0, 5]
+    U3_bc = [1, 14]
+    U3x2_bc = [4, 15, 22]
+
+    W_bc = W.combine_dofs(U_bc, U3_bc, U3x2_bc)
+
+    N = W.grid.size
+    expected = [0, 5, N + 1, N + 14, 4 * N + 4, 4 * N + 15, 4 * N + 22]
+
+    assert W_bc == expected
