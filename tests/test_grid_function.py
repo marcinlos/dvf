@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 
 import dvf
-from dvf import Grid, GridFunction, as_tensor
+from dvf import Grid, GridFunction, as_tensor, random_function
 
 
 def assert_functions_equal(actual, expected):
@@ -388,3 +388,32 @@ def test_can_combine_grid_functions_with_constant_arrays(grid4x4):
     )
 
     assert_functions_equal(actual, expected)
+
+
+def test_can_create_random_scalar_function(grid4x4):
+    f = random_function(grid4x4)
+    assert f.tabulate().shape == grid4x4.shape
+
+
+def test_can_create_random_vector_function(grid4x4):
+    f = random_function(grid4x4, shape=(2,))
+    assert f.tabulate().shape == (2, *grid4x4.shape)
+
+
+def test_can_create_random_tensor_function(grid4x4):
+    f = random_function(grid4x4, shape=(2, 3))
+    assert f.tabulate().shape == (2, 3, *grid4x4.shape)
+
+
+def test_can_create_random_scalar_function_with_bc(grid4x4):
+    bc = [0, 2, 5, 8, 15]
+    f = random_function(grid4x4, bc=bc)
+
+    vals = f.tabulate()
+    np.testing.assert_allclose(np.ravel(vals)[bc], 0)
+
+
+def test_can_create_random_scalar_function_with_custom_value_distribution(grid4x4):
+    f = random_function(grid4x4, dist=lambda *shape: 3 * np.ones(shape))
+
+    np.testing.assert_allclose(f.tabulate(), 3)

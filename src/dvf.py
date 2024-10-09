@@ -273,6 +273,15 @@ def as_tensor(a):
     return GridFunction(fun, grid)
 
 
+def random_function(grid, shape=(), bc=None, dist=np.random.rand):
+    data = dist(*shape, *grid.shape)
+
+    if bc is not None:
+        data.flat[bc] = 0
+
+    return GridFunction.from_array(data, grid)
+
+
 def integrate(f):
     grid = f.grid
     h = grid.h
