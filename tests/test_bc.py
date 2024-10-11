@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from dvf import remove_dofs
+from dvf import reinsert_dofs, remove_dofs
 
 
 @pytest.fixture
@@ -91,3 +91,21 @@ def test_cannot_remove_from_higher_order_tensors():
     vec = np.zeros((2, 2, 2))
     with pytest.raises(ValueError, match="rank 3"):
         remove_dofs(vec, [])
+
+
+def test_can_reinsert_dofs_into_vector():
+    vec = np.arange(10)
+    dofs = [1, 4, 5, 8]
+    reduced = remove_dofs(vec, dofs)
+    restored = reinsert_dofs(reduced, dofs)
+
+    np.testing.assert_allclose(restored, [0, 0, 2, 3, 0, 0, 6, 7, 0, 9])
+
+
+def test_can_reinsert_dofs_into_vector_with_custom_value():
+    vec = np.arange(10)
+    dofs = [1, 4, 5, 8]
+    reduced = remove_dofs(vec, dofs)
+    restored = reinsert_dofs(reduced, dofs, -2)
+
+    np.testing.assert_allclose(restored, [0, -2, 2, 3, -2, -2, 6, 7, -2, 9])

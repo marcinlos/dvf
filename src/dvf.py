@@ -625,6 +625,14 @@ def remove_dofs(a, dofs=None, *, trial_dofs=None, test_dofs=None):
             raise ValueError(f"Tensors of rank {a.ndim} are not supported")
 
 
+def reinsert_dofs(a, dofs, value=0):
+    # kind of a hack - `np.insert` inserts items at the indices
+    # of the vector as it is, not as it was before removing them,
+    # so we need to modify them accordingly
+    dof_indices_in_a = np.sort(dofs) - np.arange(len(dofs))
+    return np.insert(a, dof_indices_in_a, value)
+
+
 def _relevant_points(p, grid):
     # assuming first-order differential operators, it is enough to consider the
     # cross-shaped stenicil
