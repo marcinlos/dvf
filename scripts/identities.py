@@ -236,3 +236,5 @@ k = int(N * 0.88)
 idx = order[k]
 axs[2].imshow(on_grid(vr[:, idx].T))
 axs[2].set_title(f"eig {k}, q = {vals[idx]:6.5f}")
+
+plt.show()

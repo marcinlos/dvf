@@ -32,6 +32,7 @@ from dvf import (
     lift_to_gridfun,
     nabla,
     norm,
+    remove_dofs,
 )
 
 # %%
@@ -66,9 +67,9 @@ def build_matrices(grid):
     P_bc = [
         f.index for idx in grid.boundary(Edge.LEFT | Edge.TOP) for f in P.basis_at(idx)
     ] + [grid.ravel_index((grid.n, grid.n))]
-    A = np.delete(np.delete(A, P_bc, axis=0), U_bc, axis=1)
-    M = np.delete(np.delete(M, P_bc, axis=0), P_bc, axis=1)
-    G = np.delete(np.delete(G, U_bc, axis=0), U_bc, axis=1)
+    A = remove_dofs(A, trial_dofs=U_bc, test_dofs=P_bc)
+    M = remove_dofs(M, P_bc)
+    G = remove_dofs(G, U_bc)
 
     return A, M, G, U, P, U_bc, P_bc
 
@@ -290,3 +291,5 @@ plt.ylabel("inf-sup constant")
 plt.xlabel("grid size (N)")
 plt.title("inf-sup constant as a function of grid size")
 plt.show()
+
+# %%
