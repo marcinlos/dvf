@@ -16,13 +16,16 @@
 # # Discrete Stokes formulation
 
 # %% jupyter={"source_hidden": true}
+from typing import NamedTuple
+
 import matplotlib.pyplot as plt
 import numpy as np
 import scipy
+import torch
+from torch import nn
 
 from dvf import (
     CompositeFunctionSpace,
-    Edge,
     FunctionSpace,
     Grid,
     GridFunction,
@@ -34,10 +37,14 @@ from dvf import (
     lift_to_gridfun,
     nabla,
     norm,
+    random_function,
+    reinsert_dofs,
+    remove_dofs,
+    select_dofs,
 )
 
 # %%
-grid = Grid(50)
+grid = Grid(30)
 
 # %% [markdown]
 # ### Spaces and boundary conditions
@@ -48,17 +55,43 @@ U = VectorFunctionSpace(grid, 2)
 P = FunctionSpace(grid)
 W = CompositeFunctionSpace(S, U, P)
 
-# %%
-U_offset = S.dim
-P_offset = S.dim + U.dim
 
-S_bc = np.array([], dtype=np.intp)
-U_bc = np.array([f.index for idx in grid.boundary() for f in U.basis_at(idx)])
-P_bc = np.array(
-    [f.index for idx in grid.boundary(Edge.LEFT | Edge.TOP) for f in P.basis_at(idx)]
-    + [grid.ravel_index((grid.n, grid.n))]
-)
-W_bc = np.concat([S_bc, U_bc + U_offset, P_bc + P_offset])
+# %%
+def S_mask_fun(i, j):
+    mdx = 0 if i == 0 else 1
+    mdy = 0 if j == 0 else 1
+    return np.array([[mdx, mdy], [mdx, mdy]])
+
+
+# %%
+def U_mask_fun(i, j):
+    edges = (0, grid.n)
+    m = 0 if i in edges or j in edges else 1
+    return np.array([m, m])
+
+
+# %%
+def P_mask_fun(i, j):
+    return 0 if 0 in (i, j) or (i, j) == (grid.n, grid.n) else 1
+
+
+# %%
+s_mask = GridFunction(S_mask_fun, grid)
+u_mask = GridFunction(U_mask_fun, grid)
+p_mask = GridFunction(P_mask_fun, grid)
+
+# %%
+S_bc = select_dofs(S, s_mask, invert=True)
+U_bc = select_dofs(U, u_mask, invert=True)
+P_bc = select_dofs(P, p_mask, invert=True)
+
+W_bc = W.combine_dofs(S_bc, U_bc, P_bc)
+
+
+# %%
+def fix_pressure(p):
+    return p - p_mask * integrate(p) / integrate(p_mask)
+
 
 # %% [markdown]
 # ### Bilinear forms defining the problem and norms
@@ -90,7 +123,7 @@ def A_form(sigma, u, p, tau, v, q):
 
 def AT_form(tau, v, q, sigma, u, p):
     return (
-        dot(pi0(div(tau, "+") - nabla(q, "+")), u)
+        dot(div(tau, "+") - nabla(q, "+"), u)
         + dot(-div(v, "-"), p)
         + dot(tau + nabla(v, "-"), sigma)
     )
@@ -121,21 +154,9 @@ def AT_graph_product(*args):
 
 # %%
 def random_functions():
-    sigma_data = np.random.rand(2, 2, *grid.shape)
-    sigma_data.flat[S_bc] = 0
-    sigma = GridFunction.from_array(sigma_data, grid)
-
-    u_data = np.random.rand(2, *grid.shape)
-    u_data.flat[U_bc] = 0
-    u = GridFunction.from_array(u_data, grid)
-
-    p_data = np.random.rand(*grid.shape)
-
-    mask = np.ones(grid.shape)
-    mask.flat[P_bc] = 0
-    p_data -= np.sum(p_data * mask) / np.sum(mask)
-    p_data.flat[P_bc] = 0
-    p = GridFunction.from_array(p_data, grid)
+    sigma = random_function(grid, shape=(2, 2), bc=S_bc)
+    u = random_function(grid, shape=(2,), bc=U_bc)
+    p = fix_pressure(random_function(grid, bc=P_bc))
 
     return sigma, u, p
 
@@ -199,15 +220,11 @@ M = grid.h**2 * np.identity(W.dim)
 
 
 # %%
-def apply_bc(matrix, dofs):
-    return np.delete(np.delete(matrix, dofs, axis=0), dofs, axis=1)
-
-
-A_ = apply_bc(A, W_bc)
-AT_ = apply_bc(AT, W_bc)
-AT_p_ = apply_bc(AT_p, W_bc)
-M_ = apply_bc(M, W_bc)
-AT_graph_ = apply_bc(AT_graph, W_bc)
+A_ = remove_dofs(A, W_bc)
+AT_ = remove_dofs(AT, W_bc)
+AT_p_ = remove_dofs(AT_p, W_bc)
+M_ = remove_dofs(M, W_bc)
+AT_graph_ = remove_dofs(AT_graph, W_bc)
 
 
 # %% [markdown]
@@ -368,100 +385,71 @@ rhs_f = GridFunction.from_array(rhs_data, grid)
 exact_p_data = stokes.p(X, Y)
 exact_p = GridFunction.from_array(exact_p_data, grid)
 
-exact_u_data = np.stack([stokes.u1(X, Y), stokes.u2(X, Y)])
+exact_u_data = np.array([stokes.u1(X, Y), stokes.u2(X, Y)])
 exact_u = GridFunction.from_array(exact_u_data, grid)
 
-exact_sigma11_data = stokes.u1_dx(X, Y)
-exact_sigma12_data = stokes.u1_dy(X, Y)
-exact_sigma21_data = stokes.u2_dx(X, Y)
-exact_sigma22_data = stokes.u2_dy(X, Y)
-exact_sigma_data = np.array(
-    [
-        [exact_sigma11_data, exact_sigma12_data],
-        [exact_sigma21_data, exact_sigma22_data],
-    ]
-)
+exact_sigma_blocks = [
+    [stokes.u1_dx(X, Y), stokes.u1_dy(X, Y)],
+    [stokes.u2_dx(X, Y), stokes.u2_dy(X, Y)],
+]
+exact_sigma_data = np.array(exact_sigma_blocks)
 exact_sigma = GridFunction.from_array(exact_sigma_data, grid)
 
+
 # %%
-fig, axs = plt.subplots(ncols=3, figsize=(15, 5))
-fig.suptitle("Exact solution plotted on the grid")
+def plot_stokes(sigma, u, p, title, file=None):
+    sigma_vals = sigma.tabulate()
+    u_vals = u.tabulate()
+    p_vals = p.tabulate()
 
-img0 = axs[0].imshow(exact_u.tabulate()[0, ...].T)
-axs[0].set_title(r"$u_1$")
-fig.colorbar(img0, ax=axs[0], shrink=0.7)
+    fig = plt.figure(layout="constrained", figsize=(14, 8.7))
+    subfigs = fig.subfigures(nrows=2, hspace=-0.4)
 
-img1 = axs[1].imshow(exact_u.tabulate()[1, ...].T)
-axs[1].set_title(r"$u_2$")
-fig.colorbar(img1, ax=axs[1], shrink=0.7)
+    axs = subfigs[0].subplots(ncols=3, sharey=True)
 
-img2 = axs[2].imshow(exact_p.tabulate().T)
-axs[2].set_title(r"$p$")
-fig.colorbar(img2, ax=axs[2], shrink=0.7)
+    items = [(u_vals[0], r"$u_1$"), (u_vals[1], r"$u_2$"), (p_vals, "$p$")]
+    for i, (data, label) in enumerate(items):
+        img = axs[i].imshow(np.flipud(data.T))
+        axs[i].set_title(label)
+        subfigs[0].colorbar(img, ax=axs[i], shrink=0.7)
 
-plt.tight_layout()
-plt.show()
+    axs = subfigs[1].subplots(ncols=4, sharey=True)
 
+    for i, j in np.ndindex(2, 2):
+        ax = axs[2 * i + j]
+        img = ax.imshow(np.flipud(sigma_vals[i, j].T))
+        ax.set_title(rf"$\sigma_{{{i+1}{j+1}}}$")
+        subfigs[1].colorbar(img, ax=ax, location="bottom", shrink=0.9)
 
-fig, axs = plt.subplots(ncols=4, figsize=(15, 5))
-
-img00 = axs[0].imshow(exact_sigma.tabulate()[0, 0, ...].T)
-axs[0].set_title(r"$\sigma_{11} = \partial_x u_1$")
-fig.colorbar(img00, ax=axs[0], location="bottom", shrink=0.9)
-
-img01 = axs[1].imshow(exact_sigma.tabulate()[0, 1, ...].T)
-axs[1].set_title(r"$\sigma_{12} = \partial_y u_1$")
-fig.colorbar(img01, ax=axs[1], location="bottom", shrink=0.9)
-
-img10 = axs[2].imshow(exact_sigma.tabulate()[1, 0, ...].T)
-axs[2].set_title(r"$\sigma_{21} = \partial_x u_2$")
-fig.colorbar(img10, ax=axs[2], location="bottom", shrink=0.9)
-
-img11 = axs[3].imshow(exact_sigma.tabulate()[1, 1, ...].T)
-axs[3].set_title(r"$\sigma_{22} = \partial_y u_y$")
-fig.colorbar(img11, ax=axs[3], location="bottom", shrink=0.9)
+    fig.suptitle(title)
+    if file is not None:
+        plt.savefig(file, bbox_inches="tight")
+    plt.show()
 
 
-plt.tight_layout()
-plt.show()
+# %%
+plot_stokes(exact_sigma, exact_u, exact_p, "Exact solution plotted on the grid")
 
 # %%
 fig, axs = plt.subplots(ncols=4, nrows=2, figsize=(15, 10))
+
 sigma = nabla(exact_u, "-")
+difference = (exact_sigma - nabla(exact_u, "-")) * s_mask
 
-img00 = axs[0, 0].imshow(sigma.tabulate()[0, 0, ...].T)
-axs[0, 0].set_title(r"$\nabla_{x-}u_1$")
-fig.colorbar(img00, ax=axs[0, 0], location="bottom", shrink=0.9)
+sigma_vals = sigma.tabulate()
+difference_vals = difference.tabulate()
 
-img01 = axs[0, 1].imshow(sigma.tabulate()[0, 1, ...].T)
-axs[0, 1].set_title(r"$\nabla_{y-}u_1$")
-fig.colorbar(img01, ax=axs[0, 1], location="bottom", shrink=0.9)
+for i, j in np.ndindex(2, 2):
+    ax = axs[0, 2 * i + j]
+    img = ax.imshow(np.flipud(sigma_vals[i, j].T))
+    var = ["x", "y"][j]
+    ax.set_title(rf"$\nabla_{{{var}-}}u_{{{i+1}}}$")
+    fig.colorbar(img, ax=ax, location="bottom", shrink=0.9)
 
-img10 = axs[0, 2].imshow(sigma.tabulate()[1, 0, ...].T)
-axs[0, 2].set_title(r"$\nabla_{x-}u_2$")
-fig.colorbar(img10, ax=axs[0, 2], location="bottom", shrink=0.9)
-
-img11 = axs[0, 3].imshow(sigma.tabulate()[1, 1, ...].T)
-axs[0, 3].set_title(r"$\nabla_{y-}u_2$")
-fig.colorbar(img11, ax=axs[0, 3], location="bottom", shrink=0.9)
-
-difference = exact_sigma - nabla(exact_u, "-")
-
-img00 = axs[1, 0].imshow(difference.tabulate()[0, 0, ...].T)
-axs[1, 0].set_title(r"$\sigma_{11} - \nabla_{x-}u_1$")
-fig.colorbar(img00, ax=axs[1, 0], location="bottom", shrink=0.9)
-
-img01 = axs[1, 1].imshow(difference.tabulate()[0, 1, ...].T)
-axs[1, 1].set_title(r"$\sigma_{12} - \nabla_{y-}u_1$")
-fig.colorbar(img01, ax=axs[1, 1], location="bottom", shrink=0.9)
-
-img10 = axs[1, 2].imshow(difference.tabulate()[1, 0, ...].T)
-axs[1, 2].set_title(r"$\sigma_{21} - \nabla_{x-}u_2$")
-fig.colorbar(img10, ax=axs[1, 2], location="bottom", shrink=0.9)
-
-img11 = axs[1, 3].imshow(difference.tabulate()[1, 1, ...].T)
-axs[1, 3].set_title(r"$\sigma_{22} - \nabla_{x-}u_2$")
-fig.colorbar(img11, ax=axs[1, 3], location="bottom", shrink=0.9)
+    ax = axs[1, 2 * i + j]
+    img = ax.imshow(np.flipud(difference_vals[i, j].T))
+    ax.set_title(rf"$\sigma_{{{i+1}{j+1}}} - \nabla_{{{var}-}}u_{{{i+1}}}$")
+    fig.colorbar(img, ax=ax, location="bottom", shrink=0.9)
 
 fig.suptitle(r"Components of $\nabla_{-} u$ and how it differs from exact $\sigma$")
 
@@ -483,15 +471,10 @@ norm(exact_sigma - nabla(exact_u, "-"), "h") / norm(exact_sigma, "h")
 
 
 # %%
-def mask_fun(i, j):
-    mdx = 0 if i == 0 else 1
-    mdy = 0 if j == 0 else 1
-    return np.array([[mdx, mdy], [mdx, mdy]])
+norm((exact_sigma - nabla(exact_u, "-")) * s_mask, "h") / norm(
+    exact_sigma * s_mask, "h"
+)
 
-
-mask = GridFunction(mask_fun, grid)
-
-norm((exact_sigma - nabla(exact_u, "-")) * mask, "h") / norm(exact_sigma * mask, "h")
 
 # %% [markdown]
 # ## Solving discrete formulation
@@ -499,12 +482,13 @@ norm((exact_sigma - nabla(exact_u, "-")) * mask, "h") / norm(exact_sigma * mask,
 # %% [markdown]
 # We start by preparing the right-hand side.
 
-# %%
-rhs_tau_vec = np.zeros(S.dim)
-rhs_v_vec = np.delete(np.ravel(rhs_f.tabulate()), U_bc)
-rhs_q_vec = np.delete(np.zeros(P.dim), P_bc)
 
-rhs_vec = np.concat([rhs_tau_vec, rhs_v_vec, rhs_q_vec])
+# %%
+def vector_of_values(*funs):
+    return np.concat([np.ravel(f.tabulate()) for f in funs])
+
+
+rhs_vec = remove_dofs(vector_of_values(S.zero_fun, rhs_f, P.zero_fun), W_bc)
 
 # %%
 # Too slow for large grids
@@ -520,7 +504,7 @@ lu, piv = scipy.linalg.lu_factor(A_)
 solution_data = scipy.linalg.lu_solve((lu, piv), M_ @ rhs_vec)
 
 # %%
-first_U = S.dim
+first_U = S.dim - len(S_bc)
 first_P = first_U + U.dim - len(U_bc)
 
 solution_sigma_vec = solution_data[:first_U]
@@ -536,105 +520,30 @@ solution_p_vec -= np.mean(solution_p_vec)
 
 
 # %%
-def vec_to_fun(vec, bc, shape):
-    # kind of a hack - `np.insert` inserts items at the indices
-    # of the vector as it is, not as it was before removing them,
-    # so we need to modify them accordingly
-    data = np.insert(vec, np.sort(bc) - np.arange(len(bc)), 0)
-    return GridFunction.from_array(data.reshape(shape), grid)
+def vec_to_fun(vec, bc, shape=()):
+    data = reinsert_dofs(vec, bc)
+    return GridFunction.from_array(data.reshape(*shape, *grid.shape), grid)
 
 
-solution_sigma = vec_to_fun(solution_sigma_vec, S_bc, (2, 2, *grid.shape))
-solution_u = vec_to_fun(solution_u_vec, U_bc, (2, *grid.shape))
-solution_p = vec_to_fun(solution_p_vec, P_bc, grid.shape)
+solution_sigma = vec_to_fun(solution_sigma_vec, S_bc, (2, 2))
+solution_u = vec_to_fun(solution_u_vec, U_bc, (2,))
+solution_p = vec_to_fun(solution_p_vec, P_bc)
 
 # %%
-fig, axs = plt.subplots(ncols=3, figsize=(15, 5))
-
-img0 = axs[0].imshow(solution_u.tabulate()[0, ...].T)
-axs[0].set_title(r"$u_1$")
-fig.colorbar(img0, ax=axs[0], shrink=0.7)
-
-img1 = axs[1].imshow(solution_u.tabulate()[1, ...].T)
-axs[1].set_title(r"$u_2$")
-fig.colorbar(img1, ax=axs[1], shrink=0.7)
-
-img2 = axs[2].imshow(solution_p.tabulate().T)
-axs[2].set_title(r"$p$")
-fig.colorbar(img2, ax=axs[2], shrink=0.7)
-
-fig.suptitle("Discrete formulation solution")
-plt.tight_layout()
-plt.show()
-
-
-fig, axs = plt.subplots(ncols=4, figsize=(15, 5))
-
-img00 = axs[0].imshow(solution_sigma.tabulate()[0, 0, ...].T)
-axs[0].set_title(r"$\sigma_{11}$")
-fig.colorbar(img00, ax=axs[0], location="bottom", shrink=0.9)
-
-img01 = axs[1].imshow(solution_sigma.tabulate()[0, 1, ...].T)
-axs[1].set_title(r"$\sigma_{12}$")
-fig.colorbar(img01, ax=axs[1], location="bottom", shrink=0.9)
-
-img10 = axs[2].imshow(solution_sigma.tabulate()[1, 0, ...].T)
-axs[2].set_title(r"$\sigma_{21}$")
-fig.colorbar(img10, ax=axs[2], location="bottom", shrink=0.9)
-
-img11 = axs[3].imshow(solution_sigma.tabulate()[1, 1, ...].T)
-axs[3].set_title(r"$\sigma_{22}$")
-fig.colorbar(img11, ax=axs[3], location="bottom", shrink=0.9)
-
-plt.tight_layout()
-plt.show()
-
-# %%
-fig, axs = plt.subplots(ncols=3, figsize=(15, 5))
-diff_u = solution_u - exact_u
-diff_sigma = solution_sigma - exact_sigma
-diff_p = solution_p - exact_p
-
-img0 = axs[0].imshow(diff_u.tabulate()[0, ...].T)
-axs[0].set_title(r"$u_1$")
-fig.colorbar(img0, ax=axs[0], shrink=0.7)
-
-img1 = axs[1].imshow(diff_u.tabulate()[1, ...].T)
-axs[1].set_title(r"$u_2$")
-fig.colorbar(img1, ax=axs[1], shrink=0.7)
-
-img2 = axs[2].imshow(diff_p.tabulate().T)
-axs[2].set_title(r"$p$")
-fig.colorbar(img2, ax=axs[2], shrink=0.7)
-
-fig.suptitle(
-    "Difference between the exact solution and the discrete formulation solution"
+plot_stokes(
+    solution_sigma,
+    solution_u,
+    solution_p,
+    "Discrete formulation solution",
+    file="transposed_rhs.pdf",
 )
-plt.tight_layout()
-plt.show()
 
-
-fig, axs = plt.subplots(ncols=4, figsize=(15, 5))
-
-img00 = axs[0].imshow(diff_sigma.tabulate()[0, 0, ...].T)
-axs[0].set_title(r"$\sigma_{11}$")
-fig.colorbar(img00, ax=axs[0], location="bottom", shrink=0.9)
-
-img01 = axs[1].imshow(diff_sigma.tabulate()[0, 1, ...].T)
-axs[1].set_title(r"$\sigma_{12}$")
-fig.colorbar(img01, ax=axs[1], location="bottom", shrink=0.9)
-
-img10 = axs[2].imshow(diff_sigma.tabulate()[1, 0, ...].T)
-axs[2].set_title(r"$\sigma_{21}$")
-fig.colorbar(img10, ax=axs[2], location="bottom", shrink=0.9)
-
-img11 = axs[3].imshow(diff_sigma.tabulate()[1, 1, ...].T)
-axs[3].set_title(r"$\sigma_{22}$")
-fig.colorbar(img11, ax=axs[3], location="bottom", shrink=0.9)
-
-
-plt.tight_layout()
-plt.show()
+# %%
+diff_u = solution_u - exact_u
+diff_sigma = (solution_sigma - exact_sigma) * s_mask
+diff_p = (solution_p - exact_p) * p_mask
+title = "Difference between the exact solution and the discrete formulation solution"
+plot_stokes(diff_sigma, diff_u, diff_p, title)
 
 # %%
 norm(diff_sigma, "h") / norm(exact_sigma, "h")
@@ -643,7 +552,7 @@ norm(diff_sigma, "h") / norm(exact_sigma, "h")
 # Removing contributions of the edges that should be removed:
 
 # %%
-norm(diff_sigma * mask, "h") / norm(exact_sigma * mask, "h")
+norm(diff_sigma * s_mask, "h") / norm(exact_sigma * s_mask, "h")
 
 # %%
 norm(diff_u, "h") / norm(exact_u, "h")
@@ -657,21 +566,14 @@ norm(diff_p, "h") / norm(exact_p, "h")
 
 
 # %%
-def p_mask_fun(i, j):
-    return 0 if i == 0 or j == 0 or (i, j) == (grid.n, grid.n) else 1
-
-
-p_mask = GridFunction(p_mask_fun, grid)
-
-# %%
 norm(diff_p * p_mask, "h") / norm(exact_p * p_mask, "h")
 
 # %% [markdown]
 # Ensuring zero mean of the exact pressure:
 
 # %%
-fixed_exact_p = (exact_p - integrate(exact_p * p_mask) / integrate(p_mask)) * p_mask
-norm((fixed_exact_p - solution_p) * p_mask, "h") / norm(fixed_exact_p * p_mask, "h")
+fixed_exact_p = fix_pressure(exact_p)
+norm(fixed_exact_p - solution_p, "h") / norm(fixed_exact_p, "h")
 
 # %%
 tau, v, q = random_functions()
@@ -700,19 +602,18 @@ G_ = A_ @ A_.T / grid.h**2
 ex_sigma, ex_u, ex_p = random_functions()
 
 # %%
-on_v = pi0(-div(ex_sigma, "+") + nabla(ex_p, "+") - rhs_f)
+on_v = -div(ex_sigma, "+") + nabla(ex_p, "+") - rhs_f
 on_tau = ex_sigma - nabla(ex_u, "-")
 on_q = div(ex_u, "-")
 
-ex_rhs_vec = grid.h**2 * np.concat(
-    [
-        np.ravel(on_tau.tabulate()),
-        np.ravel(on_v.tabulate()),
-        np.ravel(on_q.tabulate()),
-    ]
-)
-residuum_vec = np.delete(ex_rhs_vec, W_bc)
+ex_rhs_vec = grid.h**2 * vector_of_values(on_tau, on_v, on_q)
+residuum_vec = remove_dofs(ex_rhs_vec, W_bc)
 residuum_rep = np.linalg.solve(G_, residuum_vec)
+
+first_U = S.dim - len(S_bc)
+first_P = first_U + U.dim - len(U_bc)
+residuum_rep[first_P:] -= np.mean(residuum_rep[first_P:])
+
 residuum_norm = np.sqrt(np.dot(residuum_vec, residuum_rep))
 print(f"Residuum norm: {residuum_norm}")
 
@@ -730,6 +631,9 @@ print(f"Error: {error}")
 
 # %%
 print(f"difference: {np.abs(residuum_norm - error)}")
+
+# %% [markdown]
+# ### Exact inf-sup value
 
 # %% [markdown]
 # Adjoin graph norm Gram matrix is $G_* = M + A M^{-1} A^*$
@@ -773,9 +677,254 @@ print(f"inf-sup constant: {vals[imin]}")
 print(f"continuity constant: {vals[imax]}")
 
 # %%
-plt.plot(vals[order])
+plt.scatter(np.arange(order.size - 1), vals[order[1:]], marker=".")
+plt.xlabel("eigenvalue number")
+plt.ylabel("eigenvalue")
+plt.ylim(bottom=0)
+plt.savefig("spectrum.pdf", bbox_inches="tight")
+plt.show()
 
 # %%
 gamma = vals[imin]
 C = vals[imax]
 print(f"{1/C} < |error|/√loss < {1/gamma}")
+
+# %% [markdown]
+# ### Eigenvalue analysis using sparse tools from `scipy`
+
+# %%
+spA = scipy.sparse.csr_array(A_)
+spG2 = scipy.sparse.csc_array(G2_)
+spG2_inv = scipy.sparse.linalg.factorized(spG2)
+spM = scipy.sparse.csr_array(M_)
+
+
+def applyR(v):
+    return spA.T @ spG2_inv(spA @ v)
+
+
+spR = scipy.sparse.linalg.LinearOperator(A_.shape, matvec=applyR)
+
+# %% [markdown]
+# Computing the largest eigenvalue, corresponding to the continuity constant takes too
+# long. There are multiple eigenvalues clustered in the vicinity of 1, which is
+# detrimental to power iteration performance.
+
+# %%
+# w, vr = scipy.sparse.linalg.eigsh(spR, 1, spM, which="LM")
+# print(w)
+
+# %%
+w, vr = scipy.sparse.linalg.eigsh(spR, 3, spM, which="SM")
+print(w)
+
+# %% [markdown]
+# ## Pytorch
+
+# %%
+device = (
+    "cuda"
+    if torch.cuda.is_available()
+    else "mps"
+    if torch.backends.mps.is_available()
+    else "cpu"
+)
+print(f"Using {device} device")
+
+
+# %%
+class PINN(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.linear_relu_stack = nn.Sequential(
+            nn.Linear(2, 512),
+            nn.ReLU(),
+            nn.Linear(512, 512),
+            nn.ReLU(),
+            nn.Linear(512, 7),
+        )
+
+    def forward(self, x):
+        values = self.linear_relu_stack(x)
+        return values
+
+
+pinn = PINN().to(device)
+print(pinn)
+
+
+# %%
+def pinn_to_gridfuns(pinn):
+    points = np.concat(grid.points).reshape(2, -1)
+    args = torch.from_numpy(points.T.astype(np.float32)).to(device)
+    pinn_values = torch.ravel(pinn(args).t()).cpu().detach().numpy()
+    pinn_vec = remove_dofs(pinn_values, W_bc)
+
+    first_U = S.dim - len(S_bc)
+    first_P = first_U + U.dim - len(U_bc)
+
+    pinn_sigma_vec = pinn_vec[:first_U]
+    pinn_u_vec = pinn_vec[first_U:first_P]
+    pinn_p_vec = pinn_vec[first_P:]
+
+    pinn_p_vec -= np.mean(pinn_p_vec)
+
+    pinn_sigma = vec_to_fun(pinn_sigma_vec, S_bc, (2, 2))
+    pinn_u = vec_to_fun(pinn_u_vec, U_bc, (2,))
+    pinn_p = vec_to_fun(pinn_p_vec, P_bc)
+
+    return pinn_sigma, pinn_u, pinn_p
+
+
+# %%
+G2_LU = scipy.linalg.lu_factor(G2_)
+
+
+class ResiduumNormSq(torch.autograd.Function):
+    @staticmethod
+    def forward(vals):
+        vals_vec = remove_dofs(vals.cpu().numpy(), W_bc)
+        residuum_vec = A_ @ vals_vec - M_ @ rhs_vec
+        residuum_rep = scipy.linalg.lu_solve(G2_LU, residuum_vec)
+        return torch.tensor(np.dot(residuum_vec, residuum_rep))
+
+    @staticmethod
+    def setup_context(ctx, args, output):
+        (vals,) = args
+        ctx.save_for_backward(vals)
+
+    @staticmethod
+    def backward(ctx, grad_output):
+        (vals,) = ctx.saved_tensors
+        vals_vec = remove_dofs(vals.cpu().numpy(), W_bc)
+        residuum_vec = A_ @ vals_vec - M_ @ rhs_vec
+        residuum_rep = scipy.linalg.lu_solve(G2_LU, residuum_vec)
+        full_residuum_rep = reinsert_dofs(A_.T @ residuum_rep, W_bc)
+        grad_vals = grad_output * 2 * torch.tensor(full_residuum_rep)
+        return grad_vals.to(device)
+
+
+def loss_function(pinn):
+    points = np.concat(grid.points).reshape(2, -1)
+    args = torch.from_numpy(points.T.astype(np.float32)).to(device)
+    values = torch.ravel(pinn(args).t())
+    loss = ResiduumNormSq.apply(values)
+    return loss
+
+
+# %%
+class SolutionError(NamedTuple):
+    sigma: np.ndarray
+    u: np.ndarray
+    p: float
+
+    @property
+    def sigma_total(self):
+        return np.linalg.norm(self.sigma.flat)
+
+    @property
+    def u_total(self):
+        return np.linalg.norm(self.u)
+
+    @property
+    def total(self):
+        vec = np.array([self.p, self.sigma_total, self.u_total])
+        return np.linalg.norm(vec)
+
+
+class LearningEntry(NamedTuple):
+    epoch: int
+    loss: float
+    error_exact: SolutionError
+    error_discrete: SolutionError
+
+
+def stokes_solution_error(solution, exact):
+    sigma, u, p = solution
+    tau, v, q = exact
+
+    return SolutionError(
+        sigma=norm((sigma - tau) * s_mask, "h"),
+        u=norm((u - v) * u_mask, "h"),
+        p=norm((p - q) * p_mask, "h"),
+    )
+
+
+# %%
+def train(pinn, optimizer, max_epochs):
+    for epoch in range(max_epochs):
+        optimizer.zero_grad()
+        loss = loss_function(pinn)
+        yield epoch, loss.item()
+        loss.backward()
+        optimizer.step()
+
+
+exact_funs = (exact_sigma, exact_u, exact_p)
+discrete_funs = (solution_sigma, solution_u, solution_p)
+
+log = []
+optimizer = torch.optim.Adamax(pinn.parameters())
+
+for epoch, loss in train(pinn, optimizer, 1000):
+    pinn_funs = pinn_to_gridfuns(pinn)
+    error_exact = stokes_solution_error(pinn_funs, exact_funs)
+    error_discrete = stokes_solution_error(pinn_funs, discrete_funs)
+
+    entry = LearningEntry(epoch, loss, error_exact, error_discrete)
+    log.append(entry)
+
+    ratio = error_discrete.total / np.sqrt(loss)
+    ok = 1 / C < ratio < 1 / gamma
+    if not ok:
+        print(f"|error|/√loss ratio = {ratio}, out of bounds ({1/C}, {1 / gamma})")
+
+    if epoch % 100 == 0:
+        print(
+            f"Epoch {epoch:>5}  loss: {loss:.7g}, √loss: {np.sqrt(loss):.7g}, "
+            f"error discrete: {error_discrete.total:.7g}, "
+            f"error exact: {error_exact.total:.7g}",
+            flush=True,
+        )
+        print(f"   ratio: {1/C:.3f} < {ratio:.4f} < {1/gamma:.3f} ? {ok}")
+
+# %%
+pinn_sigma, pinn_u, pinn_p = pinn_to_gridfuns(pinn)
+
+# %%
+plot_stokes(pinn_sigma, pinn_u, pinn_p, "RPINN solution", "rpinn.pdf")
+
+# %%
+diff_u = pinn_u - solution_u
+diff_sigma = (pinn_sigma - solution_sigma) * s_mask
+diff_p = (pinn_p - solution_p) * p_mask
+title = "Difference between the PINN solution and the discrete formulation solution"
+plot_stokes(diff_sigma, diff_u, diff_p, title, "rpinn-error.pdf")
+
+# %%
+until = 3000
+epochs = [e.epoch for e in log][:until]
+loss = np.array([e.loss for e in log])[:until]
+error_discrete = np.array([e.error_discrete.total for e in log])[:until]
+error_exact = np.array([e.error_exact.total for e in log])[:until]
+lower_bound = 1 / C * np.sqrt(loss)
+upper_bound = 1 / gamma * np.sqrt(loss)
+
+plt.figure(figsize=(6.4, 4.8))
+plt.plot(epochs, error_discrete, label=r"$\|u_\theta - u_\text{discrete}\|_h$")
+plt.plot(epochs, upper_bound, "--", label=r"$\frac{1}{\gamma}\sqrt{\text{LOSS}}$")
+plt.loglog(epochs, lower_bound, "--", label=r"$\frac{1}{M}\sqrt{\text{LOSS}}$")
+plt.fill_between(epochs, lower_bound, upper_bound, alpha=0.1)
+plt.plot(epochs, error_exact, label=r"$\|u_\theta - u_\text{exact}\|_h$")
+plt.xlabel("epoch")
+plt.legend()
+plt.savefig("errors-loglog.pdf", bbox_inches="tight")
+plt.show()
+
+# %% [markdown]
+# ### Residuum norm gradient test
+
+# %%
+input = torch.randn(W.dim, dtype=torch.double, requires_grad=True)
+test = torch.autograd.gradcheck(ResiduumNormSq.apply, input, eps=1e-6, atol=1e-4)
+print(test)

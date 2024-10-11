@@ -412,6 +412,7 @@ class FunctionSpace:
     def __init__(self, grid):
         self.grid = grid
         self.zero = 0
+        self.zero_fun = GridFunction.const(self.zero, grid)
 
     @property
     def dim(self):
@@ -441,6 +442,7 @@ class VectorFunctionSpace:
         self.components = components
 
         self.zero = np.zeros(components)
+        self.zero_fun = GridFunction.const(self.zero, grid)
         self.local_basis = np.identity(components)
 
     @property
@@ -476,6 +478,7 @@ class TensorFunctionSpace:
         self.grid = grid
         self.shape = shape
         self.zero = np.zeros(self.shape)
+        self.zero_fun = GridFunction.const(self.zero, grid)
 
         self.local_basis = np.zeros(shape + shape)
         for idx in np.ndindex(*shape):
@@ -530,8 +533,7 @@ class CompositeFunctionSpace:
         _ensure_grid_equality(*spaces)
         self.spaces = spaces
         self.grid = spaces[0].grid
-        self.zero = tuple(space.zero for space in self.spaces)
-        self.zero_funs = tuple(GridFunction.const(z, self.grid) for z in self.zero)
+        self.zero_funs = tuple(space.zero_fun for space in spaces)
 
     @property
     def dim(self):
