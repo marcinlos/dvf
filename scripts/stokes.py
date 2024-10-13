@@ -44,7 +44,7 @@ from dvf import (
 )
 
 # %%
-grid = Grid(30)
+grid = Grid(10, 10)
 
 # %% [markdown]
 # ### Spaces and boundary conditions
@@ -65,14 +65,15 @@ def S_mask_fun(i, j):
 
 # %%
 def U_mask_fun(i, j):
-    edges = (0, grid.n)
-    m = 0 if i in edges or j in edges else 1
+    edges_x = (0, grid.nx)
+    edges_y = (0, grid.ny)
+    m = 0 if i in edges_x or j in edges_y else 1
     return np.array([m, m])
 
 
 # %%
 def P_mask_fun(i, j):
-    return 0 if 0 in (i, j) or (i, j) == (grid.n, grid.n) else 1
+    return 0 if 0 in (i, j) or (i, j) == (grid.nx, grid.ny) else 1
 
 
 # %%
@@ -202,7 +203,7 @@ assemble(A_form(sigma, u, p, tau, v, q), A, uu, vv)
 
 # %%
 # assemble(L2_product(sigma, u, p, tau, v, q), M, uu, vv)
-M = grid.h**2 * np.identity(W.dim)
+M = grid.cell_volume * np.identity(W.dim)
 
 
 # %% [markdown]
@@ -596,7 +597,7 @@ print(f"difference: {abs(rhs - lhs_exact)}")
 # Gram matrix of the "ideal" scalar product is $G = A M^{-1} A^*$
 
 # %%
-G_ = A_ @ A_.T / grid.h**2
+G_ = A_ @ A_.T / grid.cell_volume
 
 # %%
 ex_sigma, ex_u, ex_p = random_functions()
@@ -606,7 +607,7 @@ on_v = -div(ex_sigma, "+") + nabla(ex_p, "+") - rhs_f
 on_tau = ex_sigma - nabla(ex_u, "-")
 on_q = div(ex_u, "-")
 
-ex_rhs_vec = grid.h**2 * vector_of_values(on_tau, on_v, on_q)
+ex_rhs_vec = grid.cell_volume * vector_of_values(on_tau, on_v, on_q)
 residuum_vec = remove_dofs(ex_rhs_vec, W_bc)
 residuum_rep = np.linalg.solve(G_, residuum_vec)
 
@@ -639,7 +640,7 @@ print(f"difference: {np.abs(residuum_norm - error)}")
 # Adjoin graph norm Gram matrix is $G_* = M + A M^{-1} A^*$
 
 # %%
-G2_ = M_ + A_ @ A_.T / grid.h**2
+G2_ = M_ + A_ @ A_.T / grid.cell_volume
 
 # %%
 residuum2_rep = np.linalg.solve(G2_, residuum_vec)

@@ -24,7 +24,7 @@ def test_mass_matrix_assembly(grid4x4):
     M = np.zeros((U.dim, U.dim))
     assemble(u * v, M, u, v)
 
-    expected = grid4x4.h**2 * np.identity(U.dim)
+    expected = grid4x4.cell_volume * np.identity(U.dim)
 
     np.testing.assert_allclose(M, expected)
 

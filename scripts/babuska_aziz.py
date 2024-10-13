@@ -36,7 +36,7 @@ from dvf import (
 )
 
 # %%
-grid = Grid(10)
+grid = Grid(10, 10)
 
 
 # %% [markdown]
@@ -66,7 +66,7 @@ def build_matrices(grid):
     U_bc = [f.index for idx in grid.boundary() for f in U.basis_at(idx)]
     P_bc = [
         f.index for idx in grid.boundary(Edge.LEFT | Edge.TOP) for f in P.basis_at(idx)
-    ] + [grid.ravel_index((grid.n, grid.n))]
+    ] + [grid.ravel_index((grid.nx, grid.ny))]
     A = remove_dofs(A, trial_dofs=U_bc, test_dofs=P_bc)
     M = remove_dofs(M, P_bc)
     G = remove_dofs(G, U_bc)
@@ -130,8 +130,8 @@ p = GridFunction.from_array(p_data, grid)
 vx_vec, vy_vec = np.split(v_vec, 2)
 vx_data = np.zeros(grid.shape)
 vy_data = np.zeros(grid.shape)
-vx_data[1:-1, 1:-1] = vx_vec.reshape((grid.n - 1, grid.n - 1))
-vy_data[1:-1, 1:-1] = vy_vec.reshape((grid.n - 1, grid.n - 1))
+vx_data[1:-1, 1:-1] = vx_vec.reshape((grid.nx - 1, grid.ny - 1))
+vy_data[1:-1, 1:-1] = vy_vec.reshape((grid.nx - 1, grid.ny - 1))
 
 v_data = np.stack([vx_data, vy_data])
 v = GridFunction.from_array(v_data, grid)
@@ -267,7 +267,7 @@ vals[order[:-10:-1]]
 # %%
 def inf_sup_const(n):
     # print(f"{n} ", end=" ", flush=True)
-    grid = Grid(n)
+    grid = Grid(n, n)
     A, M, G, *_ = build_matrices(grid)
     G_inv = np.linalg.inv(G)
     R = A @ G_inv @ A.T
@@ -291,5 +291,3 @@ plt.ylabel("inf-sup constant")
 plt.xlabel("grid size (N)")
 plt.title("inf-sup constant as a function of grid size")
 plt.show()
-
-# %%

@@ -15,41 +15,41 @@ class Edge(Flag):
 
 
 class Grid:
-    def __init__(self, n):
-        self.n = n
+    def __init__(self, nx, ny):
+        self.nx = nx
+        self.ny = ny
+        self.h = 1 / np.array([nx, ny])
 
     @property
     def indices(self):
-        for i in range(self.n + 1):
-            for j in range(self.n + 1):
-                yield i, j
+        yield from np.ndindex(self.shape)
 
     @property
     def points(self):
-        xs = np.linspace(0.0, 1.0, self.n + 1)
-        ys = np.linspace(0.0, 1.0, self.n + 1)
+        xs = np.linspace(0.0, 1.0, self.nx + 1)
+        ys = np.linspace(0.0, 1.0, self.ny + 1)
         return np.meshgrid(xs, ys, indexing="ij")
 
     def point(self, idx):
-        i, j = idx
-        h = self.h
-        return (i * h, j * h)
+        missing_dims = np.ndim(idx) - 1
+        fill = [np.newaxis] * missing_dims
+        return self.h[:, *fill] * idx
 
     def index_valid(self, idx):
         i, j = idx
-        return 0 <= i <= self.n and 0 <= j <= self.n
+        return 0 <= i <= self.nx and 0 <= j <= self.ny
 
     @property
     def shape(self):
-        return (self.n + 1, self.n + 1)
+        return (self.nx + 1, self.ny + 1)
 
     @property
     def size(self):
-        return (self.n + 1) ** 2
+        return (self.nx + 1) * (self.ny + 1)
 
     @property
-    def h(self):
-        return 1 / self.n
+    def cell_volume(self):
+        return np.prod(self.h)
 
     def ravel_index(self, idx):
         """
@@ -67,40 +67,49 @@ class Grid:
         no point is repeated. No guarantees are given with regards to the order.
         """
         if Edge.TOP in edges:
-            yield from ((i, 0) for i in range(self.n))
+            yield from ((i, 0) for i in range(self.nx))
             if Edge.RIGHT not in edges:
-                yield (self.n, 0)
+                yield (self.nx, 0)
 
         if Edge.BOTTOM in edges:
             if Edge.LEFT not in edges:
-                yield (0, self.n)
-            yield from ((i, self.n) for i in range(1, self.n + 1))
+                yield (0, self.ny)
+            yield from ((i, self.ny) for i in range(1, self.nx + 1))
 
         if Edge.LEFT in edges:
             if Edge.TOP not in edges:
                 yield (0, 0)
-            yield from ((0, j) for j in range(1, self.n + 1))
+            yield from ((0, j) for j in range(1, self.ny + 1))
 
         if Edge.RIGHT in edges:
-            yield from ((self.n, j) for j in range(self.n))
+            yield from ((self.nx, j) for j in range(self.ny))
             if Edge.BOTTOM not in edges:
-                yield (self.n, self.n)
+                yield (self.nx, self.ny)
 
-    def boundary_normal(self, idx):
+    def _facet_vector(self, idx):
         out = np.zeros(2)
         i, j = idx
+        vol = self.cell_volume
 
         if i == 0:
-            out[0] = -1
-        elif i == self.n:
-            out[0] = 1
+            out[0] = -vol / self.h[0]
+        elif i == self.nx:
+            out[0] = vol / self.h[0]
 
         if j == 0:
-            out[1] = -1
-        elif j == self.n:
-            out[1] = 1
+            out[1] = -vol / self.h[1]
+        elif j == self.ny:
+            out[1] = vol / self.h[1]
 
         return out
+
+    def facet_normal(self, idx):
+        v = self._facet_vector(idx)
+        return v / np.linalg.norm(v)
+
+    def facet_area(self, idx):
+        v = self._facet_vector(idx)
+        return np.linalg.norm(v)
 
     def adjacent(self, idx):
         i, j = idx
@@ -284,14 +293,12 @@ def random_function(grid, shape=(), bc=None, dist=np.random.rand):
 
 def integrate(f):
     grid = f.grid
-    h = grid.h
-    return h**2 * sum(f(*idx) for idx in grid.indices)
+    return grid.cell_volume * sum(f(*idx) for idx in grid.indices)
 
 
 def integrate_bd(f):
     grid = f.grid
-    h = grid.h
-    return h * sum(f(*idx) for idx in grid.boundary())
+    return sum(f(*idx) * grid.facet_area(idx) for idx in grid.boundary())
 
 
 def delta(idx, /, equal=1.0, not_equal=0.0):
@@ -328,6 +335,7 @@ def shift(f, axis, offset=1):
 
 def diff(f, axis, mode):
     axis_idx = _axis_index(axis)
+    h = f.grid.h[axis_idx]
 
     match mode:
         case "+":
@@ -349,7 +357,7 @@ def diff(f, axis, mode):
         current = f(ix, iy)
         other = f(*idx)
 
-        return sign * (current - other) / f.grid.h
+        return sign * (current - other) / h
 
     return GridFunction(fun, f.grid)
 
@@ -673,4 +681,4 @@ def assemble(form, matrix, trial_fun, test_fun):
             for v in test_basis:
                 trial_fun.assign(u)
                 test_fun.assign(v)
-                matrix[v.index, u.index] += grid.h**2 * form(*p)
+                matrix[v.index, u.index] += grid.cell_volume * form(*p)

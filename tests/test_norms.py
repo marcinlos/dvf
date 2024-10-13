@@ -32,7 +32,7 @@ def g(grid4x4):
 
 def test_can_compute_h_product(f, g):
     actual = product(f, g, "h")
-    expected = f.grid.h**2 * (
+    expected = f.grid.cell_volume * (
         1 * 2
         + 5 * 1
         + 2 * (-2)
@@ -86,23 +86,26 @@ def test_can_compute_grad_h_product(f, g):
 
 def test_can_compute_h_norm(f):
     actual = norm(f, "h")
-    expected = f.grid.h * np.sqrt(
-        1**2
-        + 5**2
-        + 2**2
-        + 4**2
-        + 1**2
-        + 3**2
-        + 8**2
-        + 2**2
-        + 3**2
-        + 1**2
-        + 1**2
-        + 5**2
-        + 1**2
-        + 7**2
-        + 1**2
-        + 2**2
+    expected = np.sqrt(
+        f.grid.cell_volume
+        * (
+            1**2
+            + 5**2
+            + 2**2
+            + 4**2
+            + 1**2
+            + 3**2
+            + 8**2
+            + 2**2
+            + 3**2
+            + 1**2
+            + 1**2
+            + 5**2
+            + 1**2
+            + 7**2
+            + 1**2
+            + 2**2
+        )
     )
     assert actual == pytest.approx(expected)
 

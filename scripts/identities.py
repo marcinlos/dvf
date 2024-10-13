@@ -50,7 +50,7 @@ from dvf import (
 )
 
 # %%
-grid = Grid(20)
+grid = Grid(20, 10)
 
 
 # %%
@@ -62,7 +62,7 @@ def random_function(grid, *, shape=(), zero_bd=Edge.NONE):
 
 
 # %%
-normal = GridFunction(lambda *idx: grid.boundary_normal(idx), grid)
+normal = GridFunction(lambda *idx: grid.facet_normal(idx), grid)
 normal_x = dvf.apply_to_gridfun(lambda n: n[0], normal)
 normal_y = dvf.apply_to_gridfun(lambda n: n[1], normal)
 
@@ -166,7 +166,7 @@ check_eigen(1, 1)
 check_eigen(3, 3)
 
 # %%
-print(f"Lower bound (paper): {grid.h / (2*np.sqrt(2))}")
+print(f"Lower bound (paper): {min(grid.h) / (2*np.sqrt(2))}")
 
 # %% [markdown]
 # To get the exact values, we need to look at the generalized eigenvalue problem
@@ -219,22 +219,25 @@ print(f"C = {vals[imax]}")
 # %%
 def on_grid(eigfun):
     data = np.zeros(grid.shape)
-    data[1:-1, 1:-1] = eigfun.reshape((grid.n - 1, grid.n - 1))
+    data[1:-1, 1:-1] = eigfun.reshape((grid.nx - 1, grid.ny - 1))
     return data
 
 
 fig, axs = plt.subplots(1, 3, figsize=(15, 5))
+aspect = grid.h[0] / grid.h[1]
 
-axs[0].imshow(on_grid(vr[:, imin].T))
+axs[0].imshow(on_grid(vr[:, imin].T), aspect=aspect)
 axs[0].set_title(f"minimum q = {vals[imin]:6.5f}")
 
-axs[1].imshow(on_grid(vr[:, imax].T))
+axs[1].imshow(on_grid(vr[:, imax].T), aspect=aspect)
 axs[1].set_title(f"maximum q = {vals[imax]:6.5f}")
 
 N = w.size
 k = int(N * 0.88)
 idx = order[k]
-axs[2].imshow(on_grid(vr[:, idx].T))
+axs[2].imshow(on_grid(vr[:, idx].T), aspect=aspect)
 axs[2].set_title(f"eig {k}, q = {vals[idx]:6.5f}")
 
 plt.show()
+
+# %%
