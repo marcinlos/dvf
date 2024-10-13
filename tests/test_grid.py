@@ -97,6 +97,16 @@ def test_index_within_bounds_is_accepted(grid3x4):
     assert grid3x4.index_valid((2, 3))
 
 
+def test_can_check_validity_of_multiple_inddices(grid3x4):
+    ii = np.array([[1, 2, 0], [2, 1, 3]])
+    jj = np.array([[0, 3, 4], [-1, 2, 0]])
+
+    actual = grid3x4.index_valid((ii, jj))
+    expected = [[True, True, False], [False, True, False]]
+
+    np.testing.assert_array_equal(actual, expected)
+
+
 def test_size_computed_correctly(grid3x4):
     assert grid3x4.size == 12
 

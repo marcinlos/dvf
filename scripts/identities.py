@@ -239,5 +239,3 @@ axs[2].imshow(on_grid(vr[:, idx].T), aspect=aspect)
 axs[2].set_title(f"eig {k}, q = {vals[idx]:6.5f}")
 
 plt.show()
-
-# %%

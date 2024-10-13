@@ -149,14 +149,15 @@ print(f"error: {norm(difference + mean * unit_p, "h")}")
 
 # %%
 fig, axs = plt.subplots(1, 3, figsize=(15, 5))
+aspect = grid.h[1] / grid.h[0]
 
-axs[0].imshow(p.tabulate())
+axs[0].imshow(p.tabulate().T, aspect=aspect)
 axs[0].set_title(r"original $p$")
 
-axs[1].imshow(div(v, "-").tabulate())
+axs[1].imshow(div(v, "-").tabulate().T, aspect=aspect)
 axs[1].set_title(r"$\nabla \cdot v$")
 
-axs[2].imshow(difference.tabulate())
+axs[2].imshow(difference.tabulate().T, aspect=aspect)
 axs[2].set_title(r"$\nabla \cdot v - p$")
 plt.show()
 

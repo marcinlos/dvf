@@ -14,38 +14,54 @@ class Edge(Flag):
     ALL = TOP | BOTTOM | LEFT | RIGHT
 
 
+def _pad_rank(a, rank):
+    a = np.asanyarray(a)
+    missing = rank - a.ndim
+    new_shape = a.shape + (1,) * missing
+    return a.reshape(new_shape)
+
+
+def _pad_rank_as(a, other):
+    rank = np.ndim(other)
+    return _pad_rank(a, rank)
+
+
 class Grid:
     def __init__(self, nx, ny):
         self.nx = nx
         self.ny = ny
-        self.h = 1 / np.array([nx, ny])
+        self.n = np.array([nx, ny])
+        self.h = 1 / self.n
+        self.shape = tuple(self.n + 1)
 
     @property
     def indices(self):
-        yield from np.ndindex(self.shape)
+        return np.ndindex(self.shape)
 
     @property
     def points(self):
-        xs = np.linspace(0.0, 1.0, self.nx + 1)
-        ys = np.linspace(0.0, 1.0, self.ny + 1)
-        return np.meshgrid(xs, ys, indexing="ij")
+        coords = [np.s_[0.0 : 1.0 : 1j * size] for size in self.shape]
+        return np.mgrid[*coords]
 
     def point(self, idx):
-        missing_dims = np.ndim(idx) - 1
-        fill = [np.newaxis] * missing_dims
-        return self.h[:, *fill] * idx
+        return idx * _pad_rank_as(self.h, idx)
 
     def index_valid(self, idx):
-        i, j = idx
-        return 0 <= i <= self.nx and 0 <= j <= self.ny
+        idx = np.asanyarray(idx)
 
-    @property
-    def shape(self):
-        return (self.nx + 1, self.ny + 1)
+        lower_ok = idx >= 0
+        upper_ok = idx <= _pad_rank_as(self.n, idx)
+
+        out = np.all(lower_ok & upper_ok, axis=0)
+
+        if out.size == 1:
+            return out.item()
+        else:
+            return out
 
     @property
     def size(self):
-        return (self.nx + 1) * (self.ny + 1)
+        return np.prod(self.shape)
 
     @property
     def cell_volume(self):
