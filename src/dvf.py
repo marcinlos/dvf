@@ -33,6 +33,7 @@ class Grid:
         self.n = np.array([nx, ny])
         self.h = 1 / self.n
         self.shape = tuple(self.n + 1)
+        self.ndim = 2
 
     @property
     def indices(self):
@@ -103,21 +104,14 @@ class Grid:
                 yield (self.nx, self.ny)
 
     def _facet_vector(self, idx):
-        out = np.zeros(2)
-        i, j = idx
-        vol = self.cell_volume
+        idx = np.asanyarray(idx)
 
-        if i == 0:
-            out[0] = -vol / self.h[0]
-        elif i == self.nx:
-            out[0] = vol / self.h[0]
+        at_lower_bd = idx == 0
+        at_upper_bd = idx == _pad_rank_as(self.n, idx)
 
-        if j == 0:
-            out[1] = -vol / self.h[1]
-        elif j == self.ny:
-            out[1] = vol / self.h[1]
-
-        return out
+        direction = -1 * at_lower_bd + 1 * at_upper_bd
+        area = self.cell_volume / self.h
+        return direction * area
 
     def facet_normal(self, idx):
         v = self._facet_vector(idx)
@@ -128,12 +122,15 @@ class Grid:
         return np.linalg.norm(v)
 
     def adjacent(self, idx):
-        i, j = idx
-        for a in (i - 1, i, i + 1):
-            for b in (j - 1, j, j + 1):
-                pair = (a, b)
-                if pair != idx and self.index_valid(pair):
-                    yield pair
+        idx = np.asanyarray(idx)
+        nb = [-1, 0, 1]
+        offsets = np.meshgrid(*([nb] * self.ndim))
+        idx_ = _pad_rank(idx, idx.ndim + self.ndim)
+        indices = idx_ + offsets
+        ok = self.index_valid(indices) & np.any(indices != idx_, axis=0)
+
+        for i in np.moveaxis(indices[:, ok], 0, -1):
+            yield tuple(i)
 
 
 def _lift(op, *fs):
@@ -165,11 +162,12 @@ class GridFunction:
         self.fun = fun
         self.grid = grid
 
-    def __call__(self, i, j):
-        return self.fun(i, j)
+    def __call__(self, *idx):
+        return self.fun(*idx)
 
     def tabulate(self):
-        sample = self.fun(0, 0)
+        zero = (0,) * self.grid.ndim
+        sample = self.fun(*zero)
         out_shape = np.shape(sample) + self.grid.shape
         out = np.empty(out_shape)
 
@@ -180,28 +178,29 @@ class GridFunction:
 
     @staticmethod
     def from_function(fun, grid):
-        def index_fun(i, j):
-            x, y = grid.point((i, j))
-            return fun(x, y)
+        def index_fun(*idx):
+            xs = grid.point(idx)
+            return fun(*xs)
 
         return GridFunction(index_fun, grid)
 
     @staticmethod
     def from_array(data, grid):
-        def index_fun(i, j):
-            return data[..., i, j]
+        def index_fun(*idx):
+            return data[..., *idx]
 
         return GridFunction(index_fun, grid)
 
     @staticmethod
     def const(val, grid):
-        return GridFunction(lambda i, j: val, grid)
+        return GridFunction(lambda *idx: val, grid)
 
     @staticmethod
     def coords(grid):
-        x = GridFunction.from_function(lambda x, y: x, grid)
-        y = GridFunction.from_function(lambda x, y: y, grid)
-        return x, y
+        def coord(i):
+            return GridFunction.from_function(lambda *xs: xs[i], grid)
+
+        return tuple(coord(i) for i in range(grid.ndim))
 
     def _binop(self, op, other):
         if not isinstance(other, GridFunction):
@@ -281,10 +280,10 @@ def as_tensor(a):
 
     grid_list = list(grids(a))
 
-    def fun(i, j):
+    def fun(*idx):
         def evaluate(a):
             if isinstance(a, GridFunction):
-                return a(i, j)
+                return a(*idx)
 
             try:
                 return tuple(evaluate(x) for x in a)
@@ -337,14 +336,14 @@ def _axis_index(axis):
 def shift(f, axis, offset=1):
     axis_idx = _axis_index(axis)
 
-    def fun(ix, iy):
-        idx = np.array([ix, iy])
-        idx[axis_idx] += offset
+    def fun(*idx):
+        new_idx = np.copy(idx)
+        new_idx[axis_idx] += offset
 
-        if not f.grid.index_valid(idx):
-            return np.zeros_like(f(ix, iy))
-
-        return f(*idx)
+        if f.grid.index_valid(new_idx):
+            return f(*new_idx)
+        else:
+            return np.zeros_like(f(*idx))
 
     return GridFunction(fun, f.grid)
 
@@ -355,25 +354,23 @@ def diff(f, axis, mode):
 
     match mode:
         case "+":
-            sign = -1
             offset = +1
         case "-":
-            sign = +1
             offset = -1
         case _:
             raise ValueError(f"Invalid differentiation mode: {mode}")
 
-    def fun(ix, iy):
-        idx = np.array([ix, iy])
-        idx[axis_idx] += offset
+    def fun(*idx):
+        other_idx = np.copy(idx)
+        other_idx[axis_idx] += offset
 
-        if not f.grid.index_valid(idx):
-            return np.zeros_like(f(ix, iy))
+        current = f(*idx)
 
-        current = f(ix, iy)
-        other = f(*idx)
-
-        return sign * (current - other) / h
+        if f.grid.index_valid(other_idx):
+            other = f(*other_idx)
+            return (other - current) / (offset * h)
+        else:
+            return np.zeros_like(current)
 
     return GridFunction(fun, f.grid)
 
@@ -659,19 +656,16 @@ def reinsert_dofs(a, dofs, value=0):
     return np.insert(a, dof_indices_in_a, value)
 
 
-def _relevant_points(p, grid):
+def _relevant_points(idx, grid):
     # assuming first-order differential operators, it is enough to consider the
     # cross-shaped stenicil
-    dirs = np.array([[-1, 0], [1, 0], [0, 1], [0, -1]])
-
-    out = [p]
-
-    for d in dirs:
-        pp = p + d
-        if grid.index_valid(pp):
-            out.append(tuple(pp))
-
-    return out
+    idx = np.asanyarray(idx)
+    units = np.identity(grid.ndim, dtype=int)
+    zero = np.zeros((1, grid.ndim), dtype=int)
+    offsets = np.concat([units, -units, zero])
+    points = idx + offsets
+    ok = grid.index_valid(points.T)
+    return [tuple(idx) for idx in points[ok]]
 
 
 def _relevant_basis_funs(space, points):
