@@ -375,17 +375,17 @@ def diff(f, axis, mode):
     return GridFunction(fun, f.grid)
 
 
-def dx(f, mode):
+def Dx(f, mode):
     return diff(f, "x", mode)
 
 
-def dy(f, mode):
+def Dy(f, mode):
     return diff(f, "y", mode)
 
 
 def grad(f, mode):
     combine = lift_to_gridfun(lambda *xs: np.stack(xs, axis=-1))
-    return combine(dx(f, mode), dy(f, mode))
+    return combine(Dx(f, mode), Dy(f, mode))
 
 
 def div(f, mode):
