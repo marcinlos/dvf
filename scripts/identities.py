@@ -41,10 +41,10 @@ from dvf import (
     assemble,
     div,
     dx,
+    grad,
     integrate,
     integrate_bd,
     lift_to_gridfun,
-    nabla,
     norm,
     shift,
 )
@@ -186,7 +186,7 @@ M = np.zeros((U.dim, U.dim))
 
 assemble(u * v, M, u, v)
 dot = lift_to_gridfun(np.dot)
-assemble(dot(nabla(u, "+"), nabla(v, "+")), A, u, v)
+assemble(dot(grad(u, "+"), grad(v, "+")), A, u, v)
 
 to_remove = [grid.ravel_index(idx) for idx in grid.boundary()]
 A = np.delete(np.delete(A, to_remove, axis=0), to_remove, axis=1)

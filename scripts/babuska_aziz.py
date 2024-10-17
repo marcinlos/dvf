@@ -29,8 +29,8 @@ from dvf import (
     VectorFunctionSpace,
     assemble,
     div,
+    grad,
     lift_to_gridfun,
-    nabla,
     norm,
     remove_dofs,
 )
@@ -61,7 +61,7 @@ def build_matrices(grid):
     dot = lift_to_gridfun(np.vdot)
     assemble(div(u, "-") * q, A, u, q)
     assemble(p * q, M, p, q)
-    assemble(dot(nabla(u, "+"), nabla(v, "+")), G, u, v)
+    assemble(dot(grad(u, "+"), grad(v, "+")), G, u, v)
 
     U_bc = [f.index for idx in grid.boundary() for f in U.basis_at(idx)]
     P_bc = [
@@ -281,7 +281,7 @@ def inf_sup_const(n):
 
 
 # %%
-n_max = 50
+n_max = 20
 ns = np.arange(3, n_max + 1, 2)
 gen = (inf_sup_const(n) for n in ns)
 vals = list(tqdm(gen, total=len(ns)))

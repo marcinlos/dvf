@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from dvf import GridFunction, diff, div, dx, dy, nabla
+from dvf import GridFunction, diff, div, dx, dy, grad
 
 
 def assert_function_values_equal(actual, expected):
@@ -118,32 +118,32 @@ def test_can_compute_dy_of_tensor(grid4x4):
     assert actual == pytest.approx(expected)
 
 
-def test_can_compute_nabla_of_scalar(grid4x4):
+def test_can_compute_grad_of_scalar(grid4x4):
     f = GridFunction.from_function(lambda x, y: 2 * x + y, grid4x4)
-    df = nabla(f, "+")
+    df = grad(f, "+")
     expected = (2, 1)
     actual = df(0, 0)
 
     assert actual == pytest.approx(expected)
 
 
-def test_can_compute_nabla_of_vector(grid4x4):
+def test_can_compute_grad_of_vector(grid4x4):
     f = GridFunction.from_function(
         lambda x, y: np.array([2 * x + y, 3 * x - y]), grid4x4
     )
-    df = nabla(f, "+")
+    df = grad(f, "+")
     expected = np.array([[2, 1], [3, -1]])
     actual = df(0, 0)
 
     assert actual == pytest.approx(expected)
 
 
-def test_can_compute_nabla_of_tensor(grid4x4):
+def test_can_compute_grad_of_tensor(grid4x4):
     f = GridFunction.from_function(
         lambda x, y: np.array([[2 * x + y, x - y], [3 * x + 2 * y, -x - 2 * y]]),
         grid4x4,
     )
-    df = nabla(f, "+")
+    df = grad(f, "+")
     expected = np.array([[[2, 1], [1, -1]], [[3, 2], [-1, -2]]])
     actual = df(0, 0)
 

@@ -383,14 +383,14 @@ def dy(f, mode):
     return diff(f, "y", mode)
 
 
-def nabla(f, mode):
+def grad(f, mode):
     combine = lift_to_gridfun(lambda *xs: np.stack(xs, axis=-1))
     return combine(dx(f, mode), dy(f, mode))
 
 
 def div(f, mode):
     # np.linalg.trace sums over the last two indices, unlike np.trace
-    return apply_to_gridfun(np.linalg.trace, nabla(f, mode))
+    return apply_to_gridfun(np.linalg.trace, grad(f, mode))
 
 
 def norm(f, kind):
@@ -403,7 +403,7 @@ def product(f, g, kind):
             fun = f * g
         case "grad_h":
             dot = lift_to_gridfun(np.dot)
-            fun = dot(nabla(f, "+"), nabla(g, "+"))
+            fun = dot(grad(f, "+"), grad(g, "+"))
         case _:
             raise ValueError(f"Invalid norm: {kind}")
 

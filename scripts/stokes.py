@@ -33,9 +33,9 @@ from dvf import (
     VectorFunctionSpace,
     assemble,
     div,
+    grad,
     integrate,
     lift_to_gridfun,
-    nabla,
     norm,
     random_function,
     reinsert_dofs,
@@ -116,17 +116,17 @@ def pi0(f):
 
 def A_form(sigma, u, p, tau, v, q):
     return (
-        dot(-div(sigma, "+") + nabla(p, "+"), v)
+        dot(-div(sigma, "+") + grad(p, "+"), v)
         + dot(div(u, "-"), q)
-        + dot(sigma - nabla(u, "-"), tau)
+        + dot(sigma - grad(u, "-"), tau)
     )
 
 
 def AT_form(tau, v, q, sigma, u, p):
     return (
-        dot(div(tau, "+") - nabla(q, "+"), u)
+        dot(div(tau, "+") - grad(q, "+"), u)
         + dot(-div(v, "-"), p)
-        + dot(tau + nabla(v, "-"), sigma)
+        + dot(tau + grad(v, "-"), sigma)
     )
 
 
@@ -136,9 +136,9 @@ def L2_product(sigma, u, p, tau, v, q):
 
 def AT_product(sigma, u, p, tau, v, q):
     return (
-        dot(pi0(div(sigma, "+") - nabla(p, "+")), pi0(div(tau, "+") - nabla(q, "+")))
+        dot(pi0(div(sigma, "+") - grad(p, "+")), pi0(div(tau, "+") - grad(q, "+")))
         + dot(div(u, "-"), div(v, "-"))
-        + dot(sigma + nabla(u, "-"), tau + nabla(v, "-"))
+        + dot(sigma + grad(u, "-"), tau + grad(v, "-"))
     )
 
 
@@ -434,8 +434,8 @@ plot_stokes(exact_sigma, exact_u, exact_p, "Exact solution plotted on the grid")
 # %%
 fig, axs = plt.subplots(ncols=4, nrows=2, figsize=(15, 10))
 
-sigma = nabla(exact_u, "-")
-difference = (exact_sigma - nabla(exact_u, "-")) * s_mask
+sigma = grad(exact_u, "-")
+difference = (exact_sigma - grad(exact_u, "-")) * s_mask
 
 sigma_vals = sigma.tabulate()
 difference_vals = difference.tabulate()
@@ -462,7 +462,7 @@ plt.show()
 # large for the off-diagonal components.
 
 # %%
-norm(exact_sigma - nabla(exact_u, "-"), "h") / norm(exact_sigma, "h")
+norm(exact_sigma - grad(exact_u, "-"), "h") / norm(exact_sigma, "h")
 
 
 # %% [markdown]
@@ -472,9 +472,7 @@ norm(exact_sigma - nabla(exact_u, "-"), "h") / norm(exact_sigma, "h")
 
 
 # %%
-norm((exact_sigma - nabla(exact_u, "-")) * s_mask, "h") / norm(
-    exact_sigma * s_mask, "h"
-)
+norm((exact_sigma - grad(exact_u, "-")) * s_mask, "h") / norm(exact_sigma * s_mask, "h")
 
 
 # %% [markdown]
@@ -603,8 +601,8 @@ G_ = A_ @ A_.T / grid.cell_volume
 ex_sigma, ex_u, ex_p = random_functions()
 
 # %%
-on_v = -div(ex_sigma, "+") + nabla(ex_p, "+") - rhs_f
-on_tau = ex_sigma - nabla(ex_u, "-")
+on_v = -div(ex_sigma, "+") + grad(ex_p, "+") - rhs_f
+on_tau = ex_sigma - grad(ex_u, "-")
 on_q = div(ex_u, "-")
 
 ex_rhs_vec = grid.cell_volume * vector_of_values(on_tau, on_v, on_q)

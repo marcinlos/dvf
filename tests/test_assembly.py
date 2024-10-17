@@ -10,9 +10,9 @@ from dvf import (
     VectorFunctionSpace,
     assemble,
     div,
+    grad,
     integrate,
     lift_to_gridfun,
-    nabla,
 )
 
 
@@ -35,7 +35,7 @@ def test_stiffness_matrix_acts_correctly(grid4x4):
 
     def form(u, v):
         dot = dvf.lift_to_gridfun(np.vdot)
-        return dot(nabla(u, "+"), nabla(v, "+"))
+        return dot(grad(u, "+"), grad(v, "+"))
 
     U = FunctionSpace(grid4x4)
     u = U.trial_function()
@@ -63,7 +63,7 @@ def test_vector_space_matrix_assembly(grid4x4):
 
     def form(u, v):
         dot = dvf.lift_to_gridfun(np.vdot)
-        return dot(u, v) + dot(nabla(u, "+"), nabla(v, "-"))
+        return dot(u, v) + dot(grad(u, "+"), grad(v, "-"))
 
     U = VectorFunctionSpace(grid4x4, 2)
     u = U.trial_function()
@@ -137,9 +137,9 @@ def test_full_stokes(grid4x4):
             dot(u, v)
             + dot(sigma, tau)
             + dot(p, q)
-            + dot(div(sigma, "+") - nabla(p, "+"), div(tau, "+") - nabla(q, "+"))
+            + dot(div(sigma, "+") - grad(p, "+"), div(tau, "+") - grad(q, "+"))
             + dot(div(u, "-"), div(v, "-"))
-            + dot(sigma + nabla(u, "-"), tau + nabla(v, "-"))
+            + dot(sigma + grad(u, "-"), tau + grad(v, "-"))
         )
 
     A = np.zeros((W.dim, W.dim))
