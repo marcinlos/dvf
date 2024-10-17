@@ -416,11 +416,11 @@ class FunctionVariable(GridFunction):
         self.space = space
         self._source_fun = None
 
-    def _eval(self, i, j):
+    def _eval(self, *idx):
         if self._source_fun is None:
             return self.space.zero
         else:
-            return self._source_fun(i, j)
+            return self._source_fun(*idx)
 
     def assign(self, fun):
         self._source_fun = fun
