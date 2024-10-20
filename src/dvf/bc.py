@@ -1,6 +1,12 @@
 import numpy as np
 
 
+def _make_mask(size, dofs):
+    mask = np.ones(size, dtype=bool)
+    mask[dofs] = 0
+    return mask
+
+
 def remove_dofs(a, dofs=None, *, trial_dofs=None, test_dofs=None):
     match a.ndim:
         case 1:
@@ -13,7 +19,7 @@ def remove_dofs(a, dofs=None, *, trial_dofs=None, test_dofs=None):
             if dofs is None:
                 raise ValueError("DoFs to remove not specified")
 
-            return np.delete(a, dofs)
+            return a[_make_mask(a.size, dofs)]
 
         case 2:
             if dofs is not None:
@@ -29,11 +35,15 @@ def remove_dofs(a, dofs=None, *, trial_dofs=None, test_dofs=None):
                 if trial_dofs is None and test_dofs is None:
                     raise ValueError("DoFs to remove not specified")
 
-                trial_dofs_ = trial_dofs or ()
-                test_dofs_ = test_dofs or ()
+                trial_dofs_ = trial_dofs or []
+                test_dofs_ = test_dofs or []
 
-            b = np.delete(a, test_dofs_, axis=0)
-            return np.delete(b, trial_dofs_, axis=1)
+            rows, cols = a.shape
+
+            trial_mask = _make_mask(cols, trial_dofs_)
+            test_mask = _make_mask(rows, test_dofs_)
+
+            return a[np.ix_(test_mask, trial_mask)]
 
         case _:
             raise ValueError(f"Tensors of rank {a.ndim} are not supported")
