@@ -34,13 +34,13 @@ import scipy
 
 import dvf
 from dvf import (
+    Dx,
     Edge,
     FunctionSpace,
     Grid,
     GridFunction,
     assemble,
     div,
-    dx,
     grad,
     integrate,
     integrate_bd,
@@ -103,8 +103,8 @@ print(f"difference: {abs(lhs - rhs)}")
 f = random_function(grid)
 g = random_function(grid)
 
-lhs = integrate(dx(f, "+") * g)
-rhs = -integrate(f * dx(g, "-")) + integrate_bd(f * g * normal_x)
+lhs = integrate(Dx(f, "+") * g)
+rhs = -integrate(f * Dx(g, "-")) + integrate_bd(f * g * normal_x)
 
 # %%
 print(f"LHS: {lhs}")
@@ -124,8 +124,8 @@ print(f"difference: {abs(lhs - rhs)}")
 f = random_function(grid)
 g = random_function(grid)
 
-lhs = dx(f * g, "+")
-rhs = shift(f, "x") * dx(g, "+") + dx(f, "+") * g
+lhs = Dx(f * g, "+")
+rhs = shift(f, "x") * Dx(g, "+") + Dx(f, "+") * g
 
 # %%
 diff = lhs - rhs
