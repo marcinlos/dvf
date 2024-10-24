@@ -66,7 +66,7 @@ def build_matrices(grid):
     U_bc = [f.index for idx in grid.boundary() for f in U.basis_at(idx)]
     P_bc = [
         f.index for idx in grid.boundary(Edge.LEFT | Edge.TOP) for f in P.basis_at(idx)
-    ] + [grid.ravel_index((grid.nx, grid.ny))]
+    ] + [grid.ravel_index((grid.n[0], grid.n[1]))]
     A = remove_dofs(A, trial_dofs=U_bc, test_dofs=P_bc)
     M = remove_dofs(M, P_bc)
     G = remove_dofs(G, U_bc)
@@ -130,8 +130,8 @@ p = GridFunction.from_array(p_data, grid)
 vx_vec, vy_vec = np.split(v_vec, 2)
 vx_data = np.zeros(grid.shape)
 vy_data = np.zeros(grid.shape)
-vx_data[1:-1, 1:-1] = vx_vec.reshape((grid.nx - 1, grid.ny - 1))
-vy_data[1:-1, 1:-1] = vy_vec.reshape((grid.nx - 1, grid.ny - 1))
+vx_data[1:-1, 1:-1] = vx_vec.reshape((grid.n[0] - 1, grid.n[1] - 1))
+vy_data[1:-1, 1:-1] = vy_vec.reshape((grid.n[0] - 1, grid.n[1] - 1))
 
 v_data = np.stack([vx_data, vy_data])
 v = GridFunction.from_array(v_data, grid)

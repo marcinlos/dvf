@@ -65,15 +65,15 @@ def S_mask_fun(i, j):
 
 # %%
 def U_mask_fun(i, j):
-    edges_x = (0, grid.nx)
-    edges_y = (0, grid.ny)
+    edges_x = (0, grid.n[0])
+    edges_y = (0, grid.n[1])
     m = 0 if i in edges_x or j in edges_y else 1
     return np.array([m, m])
 
 
 # %%
 def P_mask_fun(i, j):
-    return 0 if 0 in (i, j) or (i, j) == (grid.nx, grid.ny) else 1
+    return 0 if 0 in (i, j) or (i, j) == (grid.n[0], grid.n[1]) else 1
 
 
 # %%

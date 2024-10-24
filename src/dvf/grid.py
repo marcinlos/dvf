@@ -16,8 +16,6 @@ class Edge(Flag):
 
 class Grid:
     def __init__(self, nx, ny):
-        self.nx = nx
-        self.ny = ny
         self.n = np.array([nx, ny])
         self.h = 1 / self.n
         self.shape = tuple(self.n + 1)
@@ -72,24 +70,24 @@ class Grid:
         no point is repeated. No guarantees are given with regards to the order.
         """
         if Edge.TOP in edges:
-            yield from ((i, 0) for i in range(self.nx))
+            yield from ((i, 0) for i in range(self.n[0]))
             if Edge.RIGHT not in edges:
-                yield (self.nx, 0)
+                yield (self.n[0], 0)
 
         if Edge.BOTTOM in edges:
             if Edge.LEFT not in edges:
-                yield (0, self.ny)
-            yield from ((i, self.ny) for i in range(1, self.nx + 1))
+                yield (0, self.n[1])
+            yield from ((i, self.n[1]) for i in range(1, self.n[0] + 1))
 
         if Edge.LEFT in edges:
             if Edge.TOP not in edges:
                 yield (0, 0)
-            yield from ((0, j) for j in range(1, self.ny + 1))
+            yield from ((0, j) for j in range(1, self.n[1] + 1))
 
         if Edge.RIGHT in edges:
-            yield from ((self.nx, j) for j in range(self.ny))
+            yield from ((self.n[0], j) for j in range(self.n[1]))
             if Edge.BOTTOM not in edges:
-                yield (self.nx, self.ny)
+                yield (self.n[0], self.n[1])
 
     def _facet_vector(self, idx):
         idx = np.asanyarray(idx)

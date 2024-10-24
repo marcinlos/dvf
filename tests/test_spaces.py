@@ -191,7 +191,7 @@ def test_can_select_dofs_of_tensor_space(grid4x4, U3x2):
         return np.array(
             [
                 [False, i == 0],
-                [j == 0, j in (0, grid4x4.ny)],
+                [j == 0, j in (0, grid4x4.n[1])],
                 [False, i * j == 0],
             ]
         )

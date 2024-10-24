@@ -219,7 +219,7 @@ print(f"C = {vals[imax]}")
 # %%
 def on_grid(eigfun):
     data = np.zeros(grid.shape)
-    data[1:-1, 1:-1] = eigfun.reshape((grid.nx - 1, grid.ny - 1))
+    data[1:-1, 1:-1] = eigfun.reshape((grid.n[0] - 1, grid.n[1] - 1))
     return data
 
 
