@@ -70,6 +70,10 @@ testpaths = [
     "tests",
     "src",
 ]
+addopts = """
+--strict-markers
+--doctest-modules
+"""
 
 [build-system]
 requires = ["poetry-core"]

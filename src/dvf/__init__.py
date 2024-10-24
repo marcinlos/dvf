@@ -1,5 +1,9 @@
 from dvf.assemble import assemble
 from dvf.bc import reinsert_dofs, remove_dofs
+from dvf.domain import (
+    Box,
+    Interval,
+)
 from dvf.grid import Edge, Grid
 from dvf.gridfun import (
     Dx,
@@ -48,6 +52,7 @@ from dvf.spaces import (
 )
 
 __all__ = [
+    "Box",
     "CompositeBasisFunction",
     "CompositeFunctionSpace",
     "CompositeFunctionVariable",
@@ -58,6 +63,7 @@ __all__ = [
     "FunctionVariable",
     "Grid",
     "GridFunction",
+    "Interval",
     "TensorFunctionSpace",
     "VectorFunctionSpace",
     "acos",
