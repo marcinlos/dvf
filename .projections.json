@@ -1,5 +1,5 @@
 {
-  "src/supy/*.py": {
+  "src/dvf/*.py": {
     "alternate": "tests/{dirname}/test_{basename}.py",
     "type": "source"
   },
