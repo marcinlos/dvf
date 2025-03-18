@@ -17,7 +17,7 @@ RUN --mount=type=cache,target=/var/lib/apt/lists \
 # Install poetry
 RUN curl -sSL https://install.python-poetry.org | python -
 
-RUN --mount=type=bind,target=.,source=. \
-    poetry install
+COPY . .
+RUN poetry install
 
 CMD ["/bin/bash"]
