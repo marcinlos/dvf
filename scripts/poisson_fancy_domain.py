@@ -178,6 +178,7 @@ solution_u = vec_to_fun(solution_data, U_bc)
 aspect = grid.h[1] / grid.h[0]
 plt.imshow(np.flipud(solution_u.tabulate().T), aspect=aspect)
 plt.colorbar()
+plt.savefig("exact.png")
 plt.show()
 
 # %% [markdown]
@@ -283,25 +284,34 @@ def train(pinn, optimizer, max_epochs):
         optimizer.step()
 
 
+# %%
 log = []
 optimizer = torch.optim.Adamax(pinn.parameters())
 
-for epoch, loss in train(pinn, optimizer, 1000):
-    pinn_u = pinn_to_gridfuns(pinn)
-    error_exact = laplace_solution_error(pinn_u, u_exact)
-    error_discrete = laplace_solution_error(pinn_u, solution_u)
 
-    entry = LearningEntry(epoch, loss, error_exact, error_discrete)
-    log.append(entry)
+# %%
+def train_for(epochs, starting_epoch=0):
+    for local_epoch, loss in train(pinn, optimizer, epochs):
+        epoch = starting_epoch + local_epoch
+        pinn_u = pinn_to_gridfuns(pinn)
+        error_exact = laplace_solution_error(pinn_u, u_exact)
+        error_discrete = laplace_solution_error(pinn_u, solution_u)
+    
+        entry = LearningEntry(epoch, loss, error_exact, error_discrete)
+        log.append(entry)
+    
+        if epoch % 10 == 0:
+            print(
+                f"Epoch {epoch:>5}  loss: {loss:.7g}, √loss: {np.sqrt(loss):.7g}, "
+                f"error discrete: {error_discrete:.7g}, "
+                f"error exact: {error_exact:.7g}",
+                flush=True,
+            )
+            # print(f"   ratio: {1/C:.3f} < {ratio:.4f} < {1/gamma:.3f} ? {ok}")
 
-    if epoch % 10 == 0:
-        print(
-            f"Epoch {epoch:>5}  loss: {loss:.7g}, √loss: {np.sqrt(loss):.7g}, "
-            f"error discrete: {error_discrete:.7g}, "
-            f"error exact: {error_exact:.7g}",
-            flush=True,
-        )
-        # print(f"   ratio: {1/C:.3f} < {ratio:.4f} < {1/gamma:.3f} ? {ok}")
+
+# %%
+train_for(2000, 2000)
 
 # %%
 pinn_u = pinn_to_gridfuns(pinn)
@@ -310,10 +320,11 @@ pinn_u = pinn_to_gridfuns(pinn)
 aspect = grid.h[1] / grid.h[0]
 plt.imshow(np.flipud(pinn_u.tabulate().T), aspect=aspect)
 plt.colorbar()
+plt.savefig("crvpinn.png")
 plt.show()
 
 # %%
-until = 1000
+until = -1
 epochs = [e.epoch for e in log][:until]
 loss = np.array([e.loss for e in log])[:until]
 error_discrete = np.array([e.error_discrete for e in log])[:until]
@@ -329,7 +340,7 @@ plt.fill_between(epochs, lower_bound, upper_bound, alpha=0.1)
 plt.plot(epochs, error_exact, label=r"$\|u_\theta - u_\text{exact}\|_h$")
 plt.xlabel("epoch")
 plt.legend()
-# plt.savefig("errors-loglog.pdf", bbox_inches="tight")
+plt.savefig("laplace-errors-loglog.pdf", bbox_inches="tight")
 plt.show()
 
 # %%
