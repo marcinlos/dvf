@@ -1,32 +1,52 @@
-[tool.poetry]
+[project]
 name = "dvf"
 version = "0.1.0"
 description = ""
-authors = ["Marcin Łoś <marcin.los.91@gmail.com>"]
+authors = [
+    { name = "Marcin Łoś", email = "marcin.los.91@gmail.com"},
+]
+requires-python = ">=3.12"
 readme = "README.md"
+dependencies = [
+    "numpy>=2.4.0",
+    "scipy>=1.16.3",
+    "torch>=2.9.1",
+]
 
-[tool.poetry.dependencies]
-python = "^3.11"
-numpy = "^2.1.1"
-scipy = "^1.14.1"
-torch = "^2.4.1"
+[dependency-groups]
+dev = [
+    "codespell>=2.4.1",
+    "pre-commit>=4.5.1",
+    "pyright>=1.1.407",
+    "pytest>=9.0.2",
+    "pytest-mock>=3.15.1",
+    "pytest-watcher>=0.6.2",
+    "ruff>=0.14.10",
+]
+notebooks = [
+    "jupyterlab>=4.5.1",
+    "jupyterlab-myst>=2.6.0",
+    "jupytext>=1.18.1",
+    "matplotlib>=3.10.8",
+    "tqdm>=4.67.1",
+]
 
-[tool.poetry.group.dev.dependencies]
-ruff = "^0.6.8"
-pre-commit = "^3.8.0"
-codespell = "^2.3"
+[tool.uv]
+default-groups = "all"
 
-[tool.poetry.group.test.dependencies]
-pytest = "^8.3.3"
-pytest-mock = "^3.14.0"
-pytest-watcher = "^0.4.3"
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
-[tool.poetry.group.notebooks.dependencies]
-jupyterlab = "^4.2.5"
-jupyterlab-myst = "^2.4.2"
-jupytext = "^1.16.4"
-tqdm = "^4.66.5"
-matplotlib = "^3.9.2"
+[tool.uv.sources]
+torch = [
+    { index = "pytorch-cpu" },
+]
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
 
 [tool.ruff]
 target-version = "py311"
@@ -74,7 +94,3 @@ addopts = """
 --strict-markers
 --doctest-modules
 """
-
-[build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
