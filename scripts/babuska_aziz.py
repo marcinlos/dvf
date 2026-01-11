@@ -145,7 +145,7 @@ unit_p = GridFunction.from_array(unit_p_data, grid)
 
 # %%
 difference = div(v, "-") - p
-print(f"error: {norm(difference + mean * unit_p, "h")}")
+print(f"error: {norm(difference + mean * unit_p, 'h')}")
 
 # %%
 fig, axs = plt.subplots(1, 3, figsize=(15, 5))

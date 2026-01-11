@@ -296,10 +296,10 @@ def train_for(epochs, starting_epoch=0):
         pinn_u = pinn_to_gridfuns(pinn)
         error_exact = laplace_solution_error(pinn_u, u_exact)
         error_discrete = laplace_solution_error(pinn_u, solution_u)
-    
+
         entry = LearningEntry(epoch, loss, error_exact, error_discrete)
         log.append(entry)
-    
+
         if epoch % 10 == 0:
             print(
                 f"Epoch {epoch:>5}  loss: {loss:.7g}, √loss: {np.sqrt(loss):.7g}, "

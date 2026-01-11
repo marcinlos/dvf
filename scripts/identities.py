@@ -166,7 +166,7 @@ check_eigen(1, 1)
 check_eigen(3, 3)
 
 # %%
-print(f"Lower bound (paper): {min(grid.h) / (2*np.sqrt(2))}")
+print(f"Lower bound (paper): {min(grid.h) / (2 * np.sqrt(2))}")
 
 # %% [markdown]
 # To get the exact values, we need to look at the generalized eigenvalue problem
