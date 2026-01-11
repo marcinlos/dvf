@@ -78,7 +78,7 @@ browser:
         --interactive \
         --tty \
         --volume .:/code:z \
-        hp-rvpinn:latest \
+        dvf:latest \
         just \
             install-hooks \
             gen-notebooks
