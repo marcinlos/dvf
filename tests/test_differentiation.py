@@ -157,7 +157,7 @@ def test_zero_derivatives_at_the_boundary_have_correct_shapes(grid4x4):
     )
     dfx = Dy(f, "+")
 
-    assert np.shape(dfx(4, 1)) == (2, 2)
+    assert np.shape(dfx(1, 1)) == (2, 2)
 
 
 def test_can_compute_div_of_vector(grid4x4):

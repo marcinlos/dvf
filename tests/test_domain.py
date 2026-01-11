@@ -1,3 +1,4 @@
+import numpy as np
 import pytest
 
 from dvf import Box, Interval
@@ -45,3 +46,7 @@ def test_box_can_get_axis_names(box) -> None:
 
 def test_box_can_get_number_of_dimensions(box) -> None:
     assert box.ndim == 2
+
+
+def test_box_can_get_edge_lengths(box) -> None:
+    np.testing.assert_allclose(box.edge_lengths, [3, 2])

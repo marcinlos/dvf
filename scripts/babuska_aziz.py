@@ -281,7 +281,7 @@ def inf_sup_const(n):
 
 
 # %%
-n_max = 20
+n_max = 30
 ns = np.arange(3, n_max + 1, 2)
 gen = (inf_sup_const(n) for n in ns)
 vals = list(tqdm(gen, total=len(ns)))

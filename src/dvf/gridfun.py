@@ -46,7 +46,7 @@ class GridFunction:
     @staticmethod
     def from_function(fun, grid):
         def index_fun(*idx):
-            xs = grid.point(idx)
+            xs = grid[idx]
             return fun(*xs)
 
         return GridFunction(index_fun, grid)
@@ -174,8 +174,8 @@ def random_function(grid, shape=(), bc=None, dist=np.random.rand):
 
 
 def delta(idx, /, equal=1.0, not_equal=0.0):
-    def fun(p, q):
-        return equal if (p, q) == idx else not_equal
+    def fun(*p):
+        return equal if p == idx else not_equal
 
     return fun
 

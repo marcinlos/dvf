@@ -15,7 +15,7 @@
 # %% [markdown]
 # # Discrete Stokes formulation
 
-# %% jupyter={"source_hidden": true}
+# %%
 from typing import NamedTuple
 
 import matplotlib.pyplot as plt
@@ -42,9 +42,10 @@ from dvf import (
     remove_dofs,
     select_dofs,
 )
+from dvf.assemble import assemble_optimized
 
 # %%
-grid = Grid(10, 10)
+grid = Grid(20, 20)
 
 # %% [markdown]
 # ### Spaces and boundary conditions
@@ -196,7 +197,84 @@ M = np.zeros((W.dim, W.dim))
 AT_graph = np.zeros((W.dim, W.dim))
 
 # %%
+
+_i = {
+    "s11": 0,
+    "s12": 1,
+    "s21": 2,
+    "s22": 3,
+    "u1": 4,
+    "u2": 5,
+    "p": 6,
+}
+
+links = [
+    (((1, 0), _i["s11"]), ((0, 0), _i["u1"])),
+    (((0, 1), _i["s12"]), ((0, 0), _i["u1"])),
+    (((1, 0), _i["p"]), ((0, 0), _i["u1"])),
+    (((1, 0), _i["s21"]), ((0, 0), _i["u2"])),
+    (((0, 1), _i["s22"]), ((0, 0), _i["u2"])),
+    (((0, 1), _i["p"]), ((0, 0), _i["u2"])),
+    (((0, 0), _i["s11"]), ((0, 0), _i["u1"])),
+    (((0, 0), _i["s12"]), ((0, 0), _i["u1"])),
+    (((0, 0), _i["p"]), ((0, 0), _i["u1"])),
+    (((0, 0), _i["s21"]), ((0, 0), _i["u2"])),
+    (((0, 0), _i["s22"]), ((0, 0), _i["u2"])),
+    (((0, 0), _i["p"]), ((0, 0), _i["u2"])),
+    (((-1, 0), _i["u1"]), ((0, 0), _i["p"])),
+    (((0, -1), _i["u2"]), ((0, 0), _i["p"])),
+    (((0, 0), _i["u1"]), ((0, 0), _i["p"])),
+    (((0, 0), _i["u2"]), ((0, 0), _i["p"])),
+    (((0, 0), _i["s11"]), ((0, 0), _i["s11"])),
+    (((0, 0), _i["u1"]), ((0, 0), _i["s11"])),
+    (((-1, 0), _i["u1"]), ((0, 0), _i["s11"])),
+    (((0, 0), _i["s12"]), ((0, 0), _i["s12"])),
+    (((0, 0), _i["u1"]), ((0, 0), _i["s12"])),
+    (((0, -1), _i["u1"]), ((0, 0), _i["s12"])),
+    (((0, 0), _i["s21"]), ((0, 0), _i["s21"])),
+    (((0, 0), _i["u2"]), ((0, 0), _i["s21"])),
+    (((-1, 0), _i["u2"]), ((0, 0), _i["s21"])),
+    (((0, 0), _i["s22"]), ((0, 0), _i["s22"])),
+    (((0, 0), _i["u2"]), ((0, 0), _i["s22"])),
+    (((0, -1), _i["u2"]), ((0, 0), _i["s22"])),
+]
+
+Aopt = np.zeros((W.dim, W.dim))
+
+# %%
+# %%time
+assemble_optimized(A_form(sigma, u, p, tau, v, q), Aopt, uu, vv, links)
+
+# %%
+# %%time
 assemble(A_form(sigma, u, p, tau, v, q), A, uu, vv)
+
+# %%
+fig, axs = plt.subplots(ncols=2, figsize=(15, 8))
+
+# kwargs = dict(vmin=-0.4, vmax=0.4)
+kwargs = {}
+axs[0].matshow(A, **kwargs)
+axs[1].matshow(Aopt, **kwargs)
+
+axs[0].set_title("A")
+axs[1].set_title("Aopt")
+
+mask = np.ones_like(A) * np.nan
+mask[:, W_bc] = 0.2
+mask[W_bc, :] = 0.2
+
+# for ax in axs:
+# ax.matshow(mask, alpha=0.75, cmap="spring", vmin=0, vmax=1)
+
+for dof in range(grid.size, W.dim, grid.size):
+    for ax in axs:
+        kwargs = dict(color="black", linewidth=0.8, linestyle="--")
+        ax.axvline(dof, **kwargs)
+        ax.axhline(dof, **kwargs)
+
+# plt.savefig("A_vs_G.pdf", bbox_inches="tight")
+plt.show()
 
 # %% [markdown]
 # The Gram matrix $M$ of $(\cdot,\cdot)_h$ is just $h^2 I$.
@@ -927,3 +1005,100 @@ plt.show()
 input = torch.randn(W.dim, dtype=torch.double, requires_grad=True)
 test = torch.autograd.gradcheck(ResiduumNormSq.apply, input, eps=1e-6, atol=1e-4)
 print(test)
+
+# %%
+A_sent = np.load("/home/los/Downloads/A.npy")
+G_sent = np.load("/home/los/Downloads/G.npy")
+A_reduced = np.delete(np.delete(A_sent, W_bc, axis=0), W_bc, axis=1)
+G_reduced = np.delete(np.delete(G_sent, W_bc, axis=0), W_bc, axis=1)
+
+# %%
+grid_size = 16
+W_dim = grid_size * 7
+bc = [
+    # tau_11 - x=0
+    0,
+    1,
+    2,
+    3,
+    # tau_12 - y=0
+    16,
+    20,
+    24,
+    28,
+    # tau_21 - x=0
+    32,
+    33,
+    34,
+    35,
+    # tau_22 - y=0
+    48,
+    52,
+    56,
+    60,
+    # ux - caly brzeg
+    64,
+    65,
+    66,
+    67,
+    68,
+    71,
+    72,
+    75,
+    76,
+    77,
+    78,
+    79,
+    # uy - caly brzeg
+    80,
+    81,
+    82,
+    83,
+    84,
+    87,
+    88,
+    91,
+    92,
+    93,
+    94,
+    95,
+    # p - x = 0
+    96,
+    97,
+    98,
+    99,
+    # p - y = 0
+    100,
+    104,
+    108,
+    # p - naroznik
+    111,
+]
+
+fig, axs = plt.subplots(ncols=2, figsize=(15, 8))
+
+kwargs = dict(vmin=-0.4, vmax=0.4)
+axs[0].matshow(A_sent, **kwargs)
+axs[1].matshow(G_sent, **kwargs)
+
+axs[0].set_title("A")
+axs[1].set_title("G")
+
+mask = np.ones_like(A_sent) * np.nan
+mask[:, bc] = 0.2
+mask[bc, :] = 0.2
+
+for ax in axs:
+    ax.matshow(mask, alpha=0.75, cmap="spring", vmin=0, vmax=1)
+
+for dof in range(grid_size, W_dim, grid_size):
+    for ax in axs:
+        kwargs = dict(color="black", linewidth=0.8, linestyle="--")
+        ax.axvline(dof, **kwargs)
+        ax.axhline(dof, **kwargs)
+
+plt.savefig("A_vs_G.pdf", bbox_inches="tight")
+plt.show()
+
+# %%
+np.vecdot(np.array([[1, 2], [3, 4]]), np.array([[5, 6], [7, 8]]))

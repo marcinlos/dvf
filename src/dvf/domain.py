@@ -1,5 +1,12 @@
+from __future__ import annotations
+
 import typing
-from typing import NamedTuple
+from typing import TYPE_CHECKING, NamedTuple
+
+import numpy as np
+
+if TYPE_CHECKING:
+    import numpy.typing as npt
 
 
 class Interval(NamedTuple):
@@ -70,6 +77,8 @@ class Box:
     3
     >>> cube.axes
     ('x', 'y', 'z')
+    >>> cube.edge_lengths
+    array([1, 3, 2])
     """
 
     def __init__(self, **dims: tuple[float, float]) -> None:
@@ -106,3 +115,13 @@ class Box:
     def ndim(self) -> int:
         """Dimension of the hyperrectangle."""
         return len(self._dims)
+
+    @property
+    def edge_lengths(self) -> npt.NDArray:
+        """Lengths of the edges."""
+        return np.array([s.length for s in self._by_index])
+
+    @property
+    def spans(self) -> tuple[Interval, ...]:
+        """Spans along all the axes."""
+        return self._by_index
