@@ -1,4 +1,4 @@
-FROM ubuntu:24.04
+FROM nvidia/cuda:13.0.0-runtime-ubuntu24.04
 
 WORKDIR /code
 
@@ -25,10 +25,10 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     --mount=type=bind,source=uv.lock,target=uv.lock,z \
     --mount=type=bind,source=pyproject.toml,target=pyproject.toml,z \
     uv venv && \
-    uv sync --extra cpu --locked --no-install-project
+    uv sync --extra gpu --locked --no-install-project
 
 COPY . .
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --extra cpu --locked
+    uv sync --extra gpu --locked
 
 RUN uv run pre-commit install-hooks
