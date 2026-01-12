@@ -136,7 +136,10 @@ def L2_product(sigma, u, p, tau, v, q):
 
 def AT_product(sigma, u, p, tau, v, q):
     return (
-        dot(pi0(div(sigma, "+") - grad(p, "+")), pi0(div(tau, "+") - grad(q, "+")))
+        dot(
+            pi0(div(sigma, "+") - grad(p, "+")),
+            pi0(div(tau, "+") - grad(q, "+")),
+        )
         + dot(div(u, "-"), div(v, "-"))
         + dot(sigma + grad(u, "-"), tau + grad(v, "-"))
     )
@@ -419,7 +422,7 @@ def plot_stokes(sigma, u, p, title, file=None):
     for i, j in np.ndindex(2, 2):
         ax = axs[2 * i + j]
         img = ax.imshow(np.flipud(sigma_vals[i, j].T))
-        ax.set_title(rf"$\sigma_{{{i+1}{j+1}}}$")
+        ax.set_title(rf"$\sigma_{{{i + 1}{j + 1}}}$")
         subfigs[1].colorbar(img, ax=ax, location="bottom", shrink=0.9)
 
     fig.suptitle(title)
@@ -444,12 +447,12 @@ for i, j in np.ndindex(2, 2):
     ax = axs[0, 2 * i + j]
     img = ax.imshow(np.flipud(sigma_vals[i, j].T))
     var = ["x", "y"][j]
-    ax.set_title(rf"$\nabla_{{{var}-}}u_{{{i+1}}}$")
+    ax.set_title(rf"$\nabla_{{{var}-}}u_{{{i + 1}}}$")
     fig.colorbar(img, ax=ax, location="bottom", shrink=0.9)
 
     ax = axs[1, 2 * i + j]
     img = ax.imshow(np.flipud(difference_vals[i, j].T))
-    ax.set_title(rf"$\sigma_{{{i+1}{j+1}}} - \nabla_{{{var}-}}u_{{{i+1}}}$")
+    ax.set_title(rf"$\sigma_{{{i + 1}{j + 1}}} - \nabla_{{{var}-}}u_{{{i + 1}}}$")
     fig.colorbar(img, ax=ax, location="bottom", shrink=0.9)
 
 fig.suptitle(r"Components of $\nabla_{-} u$ and how it differs from exact $\sigma$")
@@ -686,7 +689,7 @@ plt.show()
 # %%
 gamma = vals[imin]
 C = vals[imax]
-print(f"{1/C} < |error|/√loss < {1/gamma}")
+print(f"{1 / C} < |error|/√loss < {1 / gamma}")
 
 # %% [markdown]
 # ### Eigenvalue analysis using sparse tools from `scipy`
@@ -876,7 +879,7 @@ for epoch, loss in train(pinn, optimizer, 1000):
     ratio = error_discrete.total / np.sqrt(loss)
     ok = 1 / C < ratio < 1 / gamma
     if not ok:
-        print(f"|error|/√loss ratio = {ratio}, out of bounds ({1/C}, {1 / gamma})")
+        print(f"|error|/√loss ratio = {ratio}, out of bounds ({1 / C}, {1 / gamma})")
 
     if epoch % 100 == 0:
         print(
@@ -885,7 +888,7 @@ for epoch, loss in train(pinn, optimizer, 1000):
             f"error exact: {error_exact.total:.7g}",
             flush=True,
         )
-        print(f"   ratio: {1/C:.3f} < {ratio:.4f} < {1/gamma:.3f} ? {ok}")
+        print(f"   ratio: {1 / C:.3f} < {ratio:.4f} < {1 / gamma:.3f} ? {ok}")
 
 # %%
 pinn_sigma, pinn_u, pinn_p = pinn_to_gridfuns(pinn)
@@ -914,7 +917,7 @@ plt.plot(epochs, error_discrete, label=r"$\|u_\theta - u_\text{discrete}\|_h$")
 plt.plot(epochs, upper_bound, "--", label=r"$\frac{1}{\gamma}\sqrt{\text{LOSS}}$")
 plt.loglog(epochs, lower_bound, "--", label=r"$\frac{1}{M}\sqrt{\text{LOSS}}$")
 plt.fill_between(epochs, lower_bound, upper_bound, alpha=0.1)
-plt.plot(epochs, error_exact, label=r"$\|u_\theta - u_\text{exact}\|_h$")
+# plt.plot(epochs, error_exact, label=r"$\|u_\theta - u_\text{exact}\|_h$")
 plt.xlabel("epoch")
 plt.legend()
 plt.savefig("errors-loglog.pdf", bbox_inches="tight")
