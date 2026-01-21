@@ -380,8 +380,56 @@ class StokesManufactured:
 
 
 # %%
+class StokesCavity:
+    @staticmethod
+    def rhs1(x, y):
+        return np.zeros_like(x)
+
+    @staticmethod
+    def rhs2(x, y):
+        return np.zeros_like(x)
+
+    @staticmethod
+    def u1(x, y):
+        return np.zeros_like(x)
+
+    @staticmethod
+    def u2(x, y):
+        return np.zeros_like(x)
+
+    @staticmethod
+    def u1_bc(x, y):
+        return np.isclose(y, 1)
+
+    @staticmethod
+    def u2_bc(x, y):
+        return np.zeros_like(x)
+
+    @staticmethod
+    def u1_dx(x, y):
+        return np.zeros_like(x)
+
+    @staticmethod
+    def u1_dy(x, y):
+        return np.zeros_like(x)
+
+    @staticmethod
+    def u2_dx(x, y):
+        return np.zeros_like(x)
+
+    @staticmethod
+    def u2_dy(x, y):
+        return np.zeros_like(x)
+
+    @staticmethod
+    def p(x, y):
+        return np.zeros_like(x)
+
+
+# %%
 X, Y = grid.points
-stokes = StokesManufactured
+# stokes = StokesManufactured
+stokes = StokesCavity
 
 rhs_data = np.stack([stokes.rhs1(X, Y), stokes.rhs2(X, Y)])
 rhs_f = GridFunction.from_array(rhs_data, grid)
@@ -398,6 +446,9 @@ exact_sigma_blocks = [
 ]
 exact_sigma_data = np.array(exact_sigma_blocks)
 exact_sigma = GridFunction.from_array(exact_sigma_data, grid)
+
+u_bc_data = np.array([stokes.u1_bc(X, Y), stokes.u2_bc(X, Y)])
+u_bc_fun = GridFunction.from_array(u_bc_data, grid)
 
 
 # %%
@@ -489,8 +540,11 @@ norm((exact_sigma - grad(exact_u, "-")) * s_mask, "h") / norm(exact_sigma * s_ma
 def vector_of_values(*funs):
     return np.concat([np.ravel(f.tabulate()) for f in funs])
 
+rhs_forcing = grid.cell_volume * vector_of_values(S.zero_fun, rhs_f, P.zero_fun)
+rhs_bc = A @ vector_of_values(S.zero_fun, u_bc_fun, P.zero_fun)
 
-rhs_vec = remove_dofs(vector_of_values(S.zero_fun, rhs_f, P.zero_fun), W_bc)
+rhs_vec = remove_dofs(rhs_forcing - rhs_bc, W_bc)
+
 
 # %%
 # Too slow for large grids
@@ -503,7 +557,7 @@ rhs_vec = remove_dofs(vector_of_values(S.zero_fun, rhs_f, P.zero_fun), W_bc)
 
 # %%
 lu, piv = scipy.linalg.lu_factor(A_)
-solution_data = scipy.linalg.lu_solve((lu, piv), M_ @ rhs_vec)
+solution_data = scipy.linalg.lu_solve((lu, piv), rhs_vec)
 
 # %%
 first_U = S.dim - len(S_bc)
@@ -526,10 +580,10 @@ def vec_to_fun(vec, bc, shape=()):
     data = reinsert_dofs(vec, bc)
     return GridFunction.from_array(data.reshape(*shape, *grid.shape), grid)
 
-
 solution_sigma = vec_to_fun(solution_sigma_vec, S_bc, (2, 2))
-solution_u = vec_to_fun(solution_u_vec, U_bc, (2,))
+solution_u = vec_to_fun(solution_u_vec, U_bc, (2,)) + u_bc_fun
 solution_p = vec_to_fun(solution_p_vec, P_bc)
+
 
 # %%
 plot_stokes(
@@ -892,6 +946,7 @@ for epoch, loss in train(pinn, optimizer, 1000):
 
 # %%
 pinn_sigma, pinn_u, pinn_p = pinn_to_gridfuns(pinn)
+pinn_u = pinn_u + u_bc_fun
 
 # %%
 plot_stokes(pinn_sigma, pinn_u, pinn_p, "RPINN solution", "rpinn.pdf")
