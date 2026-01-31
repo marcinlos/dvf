@@ -2,9 +2,6 @@ FROM nvidia/cuda:13.0.0-runtime-ubuntu24.04
 
 WORKDIR /code
 
-# Install uv
-COPY --from=ghcr.io/astral-sh/uv:0.6.10 /uv /uvx /bin/
-
 ENV DEBIAN_FRONTEND=noninteractive
 
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
@@ -16,6 +13,9 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
         python3 \
         python3-pip \
         just
+
+# Install uv
+COPY --from=ghcr.io/astral-sh/uv:0.6.10 /uv /uvx /bin/
 
 # Set up the project dependencies
 ENV UV_LINK_MODE=copy
