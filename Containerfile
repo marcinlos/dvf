@@ -15,7 +15,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
         just
 
 # Install uv
-COPY --from=ghcr.io/astral-sh/uv:0.6.10 /uv /uvx /bin/
+COPY --from=ghcr.io/astral-sh/uv:0.9.28 /uv /uvx /bin/
 
 # Set up the project dependencies
 ENV UV_LINK_MODE=copy
