@@ -74,8 +74,9 @@ def laplacian(expr, *vars):
 
 # %%
 x, y = sympy.symbols("x y")
+eps = 0.1
 u_expr = sympy.sin(2 * sympy.pi * x) * sympy.sin(3 * sympy.pi * y)
-f_expr = -laplacian(u_expr, x, y) + u_expr**3 - u_expr
+f_expr = -laplacian(u_expr, x, y) + (u_expr**3 - u_expr) / eps**2
 
 # %%
 u_exact = GridFunction.from_function(sympy.lambdify([x, y], u_expr), grid)
@@ -103,13 +104,13 @@ plt.show()
 
 # %%
 def A(u, v):
-    return dot(grad(u, "+"), grad(v, "+")) + (u**3 - u) * v
+    return dot(grad(u, "+"), grad(v, "+")) + (u**3 - u) / eps**2 * v
 
 
 # %%
 def jacobian(u):
     def linearization(w, v):
-        return dot(grad(w, "+"), grad(v, "+")) + (3 * u**2 * w - w) * v
+        return dot(grad(w, "+"), grad(v, "+")) + (3 * u**2 * w - w) / eps**2 * v
 
     return linearization
 
@@ -149,7 +150,7 @@ u_vec = remove_dofs(np.zeros(grid.shape).ravel(), U_bc)
 log = []
 
 # %%
-for i in range(5):
+for i in range(10):
     u = vec_to_fun(u_vec, U_bc)
     J = compute_J(u)
     r = assemble_residuum(R(u, v), v)
