@@ -37,3 +37,20 @@ def assemble(form, matrix, trial_fun, test_fun):
                 trial_fun.assign(u)
                 test_fun.assign(v)
                 matrix[v.index, u.index] += grid.cell_volume * form(*p)
+
+
+def assemble_residuum(form, test_fun):
+    V = test_fun.space
+    grid = V.grid
+
+    r = np.zeros(V.dim)
+
+    for p in grid.indices:
+        pts = _relevant_points(p, grid)
+        test_basis = _relevant_basis_funs(V, pts)
+
+        for v in test_basis:
+            test_fun.assign(v)
+            r[v.index] += grid.cell_volume * form(*p)
+
+    return r

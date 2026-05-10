@@ -1,4 +1,4 @@
-from dvf.assemble import assemble
+from dvf.assemble import assemble, assemble_residuum
 from dvf.bc import reinsert_dofs, remove_dofs
 from dvf.domain import (
     Box,
@@ -73,6 +73,7 @@ __all__ = [
     "asin",
     "asinh",
     "assemble",
+    "assemble_residuum",
     "atan",
     "atanh",
     "cos",
