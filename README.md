@@ -2,33 +2,34 @@
 
 ## Dependencies
 
-- Python version >= 3.11
-- [poetry](https://python-poetry.org/) (install e.g.
-  [using `pipx`](https://python-poetry.org/docs/#installing-with-pipx))
+- Python version >= 3.12
+- [uv](https://docs.astral.sh/uv/)
 
 ## Installation
 
 Clone the git repository:
-```
+```bash
 git clone https://github.com/marcinlos/dvf.git
 ```
-Resolve and download dependencies:
+Download dependencies:
+```bash
+uv sync # no pytorch
 ```
-poetry install
+```bash
+uv sync --extra gpu # pytorch on GPU
 ```
-Activate the virtual environment:
-```
-poetry shell
+```bash
+uv sync --extra cpu # pytorch on CPU
 ```
 Recreate notebook files using Jupytext:
-```
-jupytext --sync scripts/*.py
+```bash
+uv run jupytext --sync scripts/*.py
 ```
 
 ## Running the examples
 
 Start the Jupyter server:
 ```
-jupyter lab
+uv run jupyter lab
 ```
 and run the code in the notebooks.
