@@ -66,7 +66,7 @@ browser:
 
 # Generate notebooks from sources
 @gen-notebooks:
-    uv run jupytext --sync jupytext/*
+    uv run jupytext --sync scripts/*
 
 # Install git hooks
 @install-hooks:
